@@ -1,0 +1,184 @@
+import { useEffect, useState } from "react"
+import { useWizardStore } from "@/stores/wizardStore"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/lib/supabase"
+import { useNavigate } from "react-router-dom"
+import { Loader2, Sparkles } from "lucide-react"
+import { generateAllContent } from "@/lib/aiProvider"
+import type { GenerativeResponse } from "@/hooks/useGemini"
+
+export function StepAnalysis() {
+  const { noc, province } = useWizardStore()
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [statusMessage, setStatusMessage] = useState("Iniciando análise...")
+  const [authChecked, setAuthChecked] = useState(false)
+
+  useEffect(() => {
+    if (authLoading) {
+      setStatusMessage("Verificando autenticação...")
+      return
+    }
+
+    if (!authChecked) {
+      setAuthChecked(true)
+      console.log("=== STEPANALYSIS - Auth checked ===");
+      console.log("User:", user?.id);
+    }
+
+    if (!user) {
+      console.log("=== USER NOT AUTHENTICATED ===");
+      setError("Usuário não autenticado. Faça login novamente.")
+      setLoading(false)
+      return
+    }
+
+    const runAnalysis = async () => {
+      console.log("=== RUNANALYSIS STARTED ===");
+      const stored = sessionStorage.getItem('wizardBackup')
+      const storedData = stored ? JSON.parse(stored) : {}
+      let resumeText = (storedData.resumeText || '').trim()
+      
+      console.log("=== RAW RESUMETEXT FROM STORAGE ===");
+      console.log("Length:", resumeText.length);
+      console.log("Contains pasted-image?", resumeText.includes('pasted-image'));
+      
+      resumeText = String(resumeText)
+        .replace(/pasted-image\d*/gi, '')
+        .replace(/data:image\S*/gi, '')
+        .replace(/data:application\S*/gi, '')
+        .replace(/\[image[^\]]*\]/gi, '')
+        .replace(/\[.*?\]/gi, '')
+        .replace(/png|jpg|jpeg|gif|bmp|webp/gi, '')
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      
+      console.log("=== AFTER CLEANING ===");
+      console.log("Length:", resumeText.length);
+
+      if (!resumeText || resumeText.length < 50) {
+        setError("Currículo não encontrado. Por favor, faça o upload novamente.")
+        setLoading(false)
+        return
+      }
+
+      const messages = [
+        "Lendo seu currículo...",
+        "Inspecionando compatibilidade com ATS...",
+        "Analisando keywords para o NOC " + noc + "...",
+        "Verificando formatação contra padrões do " + (province || "Canadá") + "...",
+        "Gerando currículo otimizado...",
+        "Buscando vagas compatíveis...",
+      ]
+
+      let msgIndex = 0
+      const interval = setInterval(() => {
+        msgIndex++
+        if (msgIndex < messages.length) {
+          setProgress(msgIndex * 15)
+          setStatusMessage(messages[msgIndex])
+        }
+      }, 2000)
+
+      try {
+        setStatusMessage("Conectando aos servidores da IA...");
+        console.log("=== INICIANDO ANÁLISE ===");
+
+        const result: GenerativeResponse = await generateAllContent(
+          resumeText,
+          noc || "General",
+          province || "Canada"
+        )
+
+        console.log("Análise concluída!")
+
+        const { error: insertError } = await supabase.from('analyses').insert({
+          user_id: user.id,
+          original_text: resumeText,
+          ats_score: 65,
+          critical_flaws: [],
+          generated_resume: result.optimizedCv,
+          ats_review: result.atsReview,
+          suggested_jobs: result.jobRecommendations
+        })
+
+        if (insertError) {
+          console.error("Erro ao salvar análise:", insertError)
+          throw new Error("Erro ao salvar análise no banco de dados.")
+        }
+
+        clearInterval(interval)
+        setProgress(100)
+        setStatusMessage("Análise concluída! Redirecionando...")
+        
+        setTimeout(() => {
+          navigate('/dashboard?success=true')
+        }, 1000)
+
+      } catch (err) {
+        console.error("Erro na análise:", err)
+        const errorMessage = err instanceof Error ? err.message : "Erro desconhecido"
+        setError(errorMessage)
+        clearInterval(interval)
+        setLoading(false)
+      }
+    }
+
+    runAnalysis()
+  }, [authLoading, user, noc, province, navigate, authChecked])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <div className="relative flex items-center justify-center mb-8">
+          <Loader2 className="h-16 w-16 text-primary animate-spin" />
+          <Sparkles className="h-6 w-6 text-primary absolute animate-pulse" />
+        </div>
+        <h3 className="text-xl font-bold animate-pulse text-foreground">
+          {progress < 20 ? "Lendo seu currículo..." : 
+           progress < 40 ? "Analisando compatibilidade com ATS..." :
+           progress < 60 ? "Verificando keywords..." :
+           progress < 80 ? "Gerando currículo otimizado..." :
+           "Finalizando..."}
+        </h3>
+        <p className="text-primary mt-2 text-sm font-medium text-center max-w-sm">
+          {statusMessage}
+        </p>
+        <p className="text-muted-foreground mt-2 text-sm text-center max-w-sm">
+          Estamos processando seu currículo para o padrão canadense. Isso leva cerca de 20-40 segundos.
+        </p>
+        <div className="w-full max-w-xs mt-6">
+          <div className="bg-secondary h-2 rounded-full overflow-hidden">
+            <div 
+              className="bg-primary h-full transition-all duration-500" 
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground text-center mt-2">{progress}% concluído</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 md:p-8 text-center space-y-4">
+        <div className="bg-destructive/10 p-4 rounded-full inline-block">
+          <Loader2 className="h-8 w-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold text-destructive">Erro na Análise</h2>
+        <p className="text-muted-foreground">{error}</p>
+        <Button onClick={() => navigate('/analyze')} className="mt-4">
+          Tentar Novamente
+        </Button>
+      </div>
+    )
+  }
+
+  return null
+}

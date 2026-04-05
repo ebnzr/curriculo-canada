@@ -1,0 +1,397 @@
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx'
+import { saveAs } from 'file-saver'
+
+export interface ResumeData {
+  name?: string;
+  title?: string;
+  contact?: string;
+  location?: string;
+  summary?: string;
+  experience?: string;
+  education?: string;
+  skills?: string;
+}
+
+export function parseResumeContent(content: string): ResumeData {
+  const data: ResumeData = {}
+  
+  if (!content) return data
+  
+  const cleaned = content
+    .replace(/pasted-image\d*/gi, '')
+    .replace(/data:image\S*/gi, '')
+    .replace(/\[.*?\]/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const sections = cleaned.split(/#{1,3}\s+/).filter(s => s.trim())
+  
+  if (sections.length > 0) {
+    const firstSection = sections[0].trim()
+    const firstLines = firstSection.split('\n').filter(l => l.trim())
+    
+    if (firstLines.length > 0) {
+      data.name = firstLines[0].replace(/[*#]/g, '').trim()
+    }
+    if (firstLines.length > 1) {
+      data.title = firstLines[1].replace(/[*#]/g, '').trim()
+    }
+  }
+
+  sections.forEach(section => {
+    const sectionLower = section.toLowerCase()
+    const lines = section.split('\n').map(l => l.trim()).filter(l => l)
+    
+    if (sectionLower.includes('summary') || sectionLower.includes('resumo') || sectionLower.includes('objetivo') || sectionLower.includes('objective') || sectionLower.includes('profile')) {
+      data.summary = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+    else if (sectionLower.includes('experience') || sectionLower.includes('experiência') || sectionLower.includes('employment') || sectionLower.includes('work')) {
+      data.experience = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+    else if (sectionLower.includes('education') || sectionLower.includes('educação') || sectionLower.includes('formação') || sectionLower.includes('academic')) {
+      data.education = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+    else if (sectionLower.includes('skill') || sectionLower.includes('habilidade') || sectionLower.includes('competência') || sectionLower.includes('conhecimento')) {
+      data.skills = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+    else if (sectionLower.includes('contact') || sectionLower.includes('contato') || sectionLower.includes('email') || sectionLower.includes('phone') || sectionLower.includes('telefone')) {
+      data.contact = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+    else if (sectionLower.includes('location') || sectionLower.includes('localização') || sectionLower.includes('address') || sectionLower.includes('endereço')) {
+      data.location = lines.join('\n').replace(/[*#]/g, '').trim()
+    }
+  })
+
+  if (!data.name && cleaned.split('\n').length > 0) {
+    const firstLine = cleaned.split('\n')[0].replace(/^#+\s*/, '').replace(/[*]/g, '').trim()
+    if (firstLine && firstLine.length < 100) {
+      data.name = firstLine
+    }
+  }
+
+  return data
+}
+
+export function generateHtmlTemplate(data: ResumeData): string {
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
+  const formatText = (text: string) => {
+    if (!text) return ''
+    return escapeHtml(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br/>')
+  }
+
+  const formatSkills = (skills: string) => {
+    if (!skills) return ''
+    return skills.split(/[,;|\n]+/)
+      .map(s => s.trim().replace(/[*#]/g, ''))
+      .filter(s => s.length > 0)
+      .map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`)
+      .join('')
+  }
+
+  return `
+<div class="resume-container">
+  <div class="header">
+    <h1>${escapeHtml(data.name || 'Seu Nome')}</h1>
+    ${data.title ? `<div class="title">${escapeHtml(data.title)}</div>` : ''}
+    <div class="contact-info">
+      ${data.location ? `<span>📍 ${escapeHtml(data.location)}</span>` : ''}
+      ${data.contact ? `<span>📧 ${escapeHtml(data.contact)}</span>` : ''}
+    </div>
+  </div>
+
+  ${data.summary ? `
+  <div class="section">
+    <div class="section-title">Professional Summary</div>
+    <p>${formatText(data.summary)}</p>
+  </div>
+  ` : ''}
+
+  ${data.experience ? `
+  <div class="section">
+    <div class="section-title">Professional Experience</div>
+    <div class="experience-item">
+      <div class="description">${formatText(data.experience)}</div>
+    </div>
+  </div>
+  ` : ''}
+
+  ${data.education ? `
+  <div class="section">
+    <div class="section-title">Education</div>
+    <p>${formatText(data.education)}</p>
+  </div>
+  ` : ''}
+
+  ${data.skills ? `
+  <div class="section">
+    <div class="section-title">Skills</div>
+    <div class="skills-grid">
+      ${formatSkills(data.skills)}
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    Optimized for Canadian Market • Generated by CurrículoCanada AI
+  </div>
+</div>
+<style>
+.resume-container {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: white;
+  padding: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.header {
+  border-bottom: 3px solid #1e3a8a;
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+
+.header h1 {
+  font-size: 24pt;
+  font-weight: 700;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 5px;
+}
+
+.header .title {
+  font-size: 12pt;
+  color: #4a5568;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.header .contact-info {
+  font-size: 10pt;
+  color: #4a5568;
+}
+
+.header .contact-info span {
+  margin-right: 15px;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 12pt;
+  font-weight: 700;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #cbd5e0;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.section p {
+  margin-bottom: 8px;
+  text-align: justify;
+}
+
+.experience-item {
+  margin-bottom: 15px;
+}
+
+.experience-item .job-title {
+  font-weight: 700;
+  font-size: 11pt;
+  color: #1a1a1a;
+}
+
+.experience-item .company {
+  font-style: italic;
+  color: #4a5568;
+}
+
+.experience-item .date {
+  font-size: 9pt;
+  color: #718096;
+}
+
+.experience-item .description {
+  margin-top: 5px;
+}
+
+.skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-tag {
+  background: #e2e8f0;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 9pt;
+  color: #1a1a1a;
+}
+
+.footer {
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid #cbd5e0;
+  text-align: center;
+  font-size: 8pt;
+  color: #a0aec0;
+}
+
+@media print {
+  .resume-container {
+    padding: 20px;
+  }
+}
+</style>`
+}
+
+export async function downloadPdf(data: ResumeData): Promise<void> {
+  const html = generateHtmlTemplate(data)
+  
+  const html2pdf = (await import('html2pdf.js')).default
+  
+  const container = document.createElement('div')
+  container.innerHTML = html
+  container.style.position = 'absolute'
+  container.style.left = '-9999px'
+  container.style.top = '0'
+  document.body.appendChild(container)
+
+  try {
+    const element = container.querySelector('.resume-container') as HTMLElement
+    await html2pdf()
+      .set({
+        margin: 10,
+        filename: 'Meu_Curriculo_Canada.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      })
+      .from(element)
+      .save()
+  } finally {
+    document.body.removeChild(container)
+  }
+}
+
+export async function downloadWord(data: ResumeData): Promise<void> {
+  const children: Paragraph[] = []
+
+  if (data.name) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: data.name.toUpperCase(), bold: true, size: 44, color: '1e3a8a' })],
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 }
+    }))
+  }
+
+  if (data.title) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: data.title, bold: false, size: 24, color: '4a5568' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 }
+    }))
+  }
+
+  const contactParts: string[] = []
+  if (data.location) contactParts.push(data.location)
+  if (data.contact) contactParts.push(data.contact)
+  
+  if (contactParts.length > 0) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: contactParts.join(' | '), size: 20, color: '4a5568' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 }
+    }))
+  }
+
+  if (data.summary) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'PROFESSIONAL SUMMARY', bold: true, size: 24, color: '1e3a8a', allCaps: true })],
+      spacing: { before: 400, after: 200 }
+    }))
+    children.push(new Paragraph({
+      children: [new TextRun({ text: data.summary, size: 22 })],
+      spacing: { after: 300 }
+    }))
+  }
+
+  if (data.experience) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'PROFESSIONAL EXPERIENCE', bold: true, size: 24, color: '1e3a8a', allCaps: true })],
+      spacing: { before: 400, after: 200 }
+    }))
+    children.push(new Paragraph({
+      children: [new TextRun({ text: data.experience, size: 22 })],
+      spacing: { after: 300 }
+    }))
+  }
+
+  if (data.education) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'EDUCATION', bold: true, size: 24, color: '1e3a8a', allCaps: true })],
+      spacing: { before: 400, after: 200 }
+    }))
+    children.push(new Paragraph({
+      children: [new TextRun({ text: data.education, size: 22 })],
+      spacing: { after: 300 }
+    }))
+  }
+
+  if (data.skills) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'SKILLS', bold: true, size: 24, color: '1e3a8a', allCaps: true })],
+      spacing: { before: 400, after: 200 }
+    }))
+    
+    const skillsList = data.skills.split(/[,;|\n]+/).map(s => s.trim()).filter(s => s)
+    children.push(new Paragraph({
+      children: skillsList.flatMap((skill, i) => [
+        new TextRun({ text: skill, bold: false, size: 20, color: '1a1a1a' }),
+        i < skillsList.length - 1 ? new TextRun({ text: ' • ', color: '4a5568' }) : new TextRun({ text: '', size: 20 })
+      ]),
+      spacing: { after: 300 }
+    }))
+  }
+
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'Optimized for Canadian Market • Generated by CurrículoCanada AI', italics: true, size: 18, color: 'a0aec0' })],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 600 }
+  }))
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 12240, height: 15840 },
+          margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 }
+        }
+      },
+      children: children
+    }]
+  })
+
+  const blob = await Packer.toBlob(doc)
+  saveAs(blob, 'Meu_Curriculo_Canada.docx')
+}
