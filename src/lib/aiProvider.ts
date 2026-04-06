@@ -84,3 +84,4 @@ export async function generateAllContent(
   }
 
   throw lastError || new Error("Falha ao processar análise após múltiplas tentativas.")
+}
