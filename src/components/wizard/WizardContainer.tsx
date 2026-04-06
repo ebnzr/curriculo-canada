@@ -28,10 +28,10 @@ export function WizardContainer() {
         </h1>
         <Progress value={progressValue} className="w-full h-2" aria-label={`Progresso: Etapa ${currentStep} de 4`} />
         <div className="flex justify-between text-xs text-muted-foreground px-1">
-          <span>Onde você quer chegar</span>
-          <span>Seu Currículo</span>
-          <span>Pagamento</span>
-          <span>Análise IA</span>
+          <span className={currentStep === 1 ? "text-red-600 font-semibold" : ""}>Onde você quer chegar</span>
+          <span className={currentStep === 2 ? "text-red-600 font-semibold" : ""}>Seu Currículo</span>
+          <span className={currentStep === 3 ? "text-red-600 font-semibold" : ""}>Pagamento</span>
+          <span className={currentStep === 4 ? "text-red-600 font-semibold" : ""}>Análise IA</span>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const ABACATEPAY_API_KEY = Deno.env.get("ABACATEPAY_API_KEY") || "abc_dev_FuwPSrrbzr6jGgx3Yn6Ft3JX"
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "https://canadapath.ai"
 
 interface CheckoutRequest {
   returnUrl: string
@@ -12,18 +12,27 @@ interface CheckoutRequest {
 
 serve(async (req: Request) => {
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey",
-  };
+  }
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    })
+  }
+
+  const apiKey = Deno.env.get("ABACATEPAY_API_KEY")
+  if (!apiKey) {
+    console.error("ABACATEPAY_API_KEY is not configured")
+    return new Response(JSON.stringify({ error: "Payment service not configured" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     })
   }
 
@@ -34,18 +43,18 @@ serve(async (req: Request) => {
     if (!returnUrl || !cpf || !phone || !userId) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       })
     }
 
-    const isDev = ABACATEPAY_API_KEY.startsWith("abc_dev_")
-    
+    const isDev = apiKey.startsWith("abc_dev_")
+
     if (isDev) {
-      console.log("Modo desenvolvimento - criando checkout simulado")
-      const mockCheckoutUrl = `http://localhost:5173/payment-sandbox?mock=true&userId=${userId}`
+      console.log("Development mode — returning mock checkout URL")
+      const mockCheckoutUrl = `${returnUrl.split("/").slice(0, 3).join("/")}/payment-sandbox?mock=true&userId=${userId}`
       return new Response(JSON.stringify({ url: mockCheckoutUrl, mock: true, sandbox: true }), {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       })
     }
 
@@ -54,52 +63,51 @@ serve(async (req: Request) => {
         name: userEmail.split("@")[0],
         email: userEmail,
         document: cpf,
-        phone: phone
+        phone: phone,
       },
       payment: {
-        value: 4990,
+        value: 5900,
         currency: "BRL",
-        description: "CurrículoCanada - Premium Package"
+        description: "CurrículoCanada - Premium Package",
       },
       redirectUrls: {
         success: `${returnUrl}?payment=success`,
-        failure: `${returnUrl}?payment=failure`
+        failure: `${returnUrl}?payment=failure`,
       },
       metadata: {
-        userId: userId
-      }
+        userId: userId,
+      },
     }
 
     const response = await fetch("https://api.abacatepay.com/v1/checkout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "api-key": ABACATEPAY_API_KEY
+        "api-key": apiKey,
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {
       const errorData = await response.text()
       console.error("AbacatePay API Error:", errorData)
-      return new Response(JSON.stringify({ error: "Failed to create checkout", details: errorData }), {
+      return new Response(JSON.stringify({ error: "Failed to create checkout" }), {
         status: response.status,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       })
     }
 
     const data = await response.json()
-    
+
     return new Response(JSON.stringify({ url: data.url || data.checkoutUrl }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     })
-
   } catch (error) {
     console.error("Error creating checkout:", error)
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     })
   }
 })

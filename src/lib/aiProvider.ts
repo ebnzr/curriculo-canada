@@ -1,53 +1,86 @@
-import { generateAllContent as generateWithGroq } from './groq'
-import { generateAllContent as generateWithGemini } from './gemini'
+import { supabase } from './supabase'
+
+export interface JobRecommendation {
+  title: string
+  company: string
+  location: string
+  matchPercentage: number
+  url: string
+  source: string
+}
 
 export interface GenerativeResponse {
-  atsReview: string;
-  optimizedCv: string;
-  jobRecommendations: {
-    title: string;
-    company: string;
-    location: string;
-    matchPercentage: string;
-    url: string;
-    source: string;
-  }[];
+  atsReview: string
+  optimizedCv: string
+  jobRecommendations: JobRecommendation[]
 }
 
-export async function generateAllContent(resumeText: string, noc: string, province: string): Promise<GenerativeResponse> {
-  console.log("=== AI PROVIDER - Tentando Groq primeiro ===");
-  
-  try {
-    const groqApiKey = import.meta.env.VITE_GROQ_API_KEY;
-    if (groqApiKey) {
-      console.log(">>> Chamando Groq API...");
-      const result = await generateWithGroq(resumeText, noc, province);
-      console.log(">>> Groq concluído com sucesso!");
-      return result;
-    } else {
-      console.log(">>> Groq API key não configurada, usando Gemini como fallback");
-    }
-  } catch (groqError) {
-    console.error(">>> Groq falhou, tentando Gemini como fallback:", groqError);
-    
-    try {
-      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (geminiApiKey) {
-        console.log(">>> Chamando Gemini API (fallback)...");
-        const result = await generateWithGemini(resumeText, noc, province);
-        console.log(">>> Gemini (fallback) concluído com sucesso!");
-        return result;
-      }
-    } catch (geminiError) {
-      console.error(">>> Gemini também falhou:", geminiError);
-      const gemErr = geminiError instanceof Error ? geminiError : new Error(String(geminiError));
-      throw new Error(`Todas as IAs falharam. Groq: ${groqError instanceof Error ? groqError.message : String(groqError)}. Gemini: ${gemErr.message}`);
-    }
-    
-    throw new Error("Nenhuma IA está configurada. Configure VITE_GROQ_API_KEY ou VITE_GEMINI_API_KEY no arquivo .env.");
+export async function generateAllContent(
+  resumeText: string,
+  noc: string,
+  province: string,
+  city?: string
+): Promise<GenerativeResponse> {
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error("Usuário não autenticado. Faça login para continuar.")
   }
 
-  // Se chegou aqui, Groq não estava configurado
-  console.log(">>> Usando Gemini como provider principal...");
-  return generateWithGemini(resumeText, noc, province);
-}
+  // Retry logic for Edge Function calls
+  const maxRetries = 3
+  let lastError: Error | null = null
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`[AI Provider] Attempt ${attempt + 1}/${maxRetries}`)
+      
+      const { data, error } = await supabase.functions.invoke('generate-analysis', {
+        body: { resumeText, noc, province, city },
+        headers: {
+          'x-dev-mode': import.meta.env.DEV ? 'true' : 'false'
+        }
+      })
+
+      if (error) {
+        const message = error.message || "Erro ao processar análise."
+        lastError = new Error(message)
+
+        if (message.includes("Premium subscription required") || message.includes("403")) {
+          throw new Error("Acesso premium necessário para gerar a análise completa.")
+        }
+        if (message.includes("429") || message.includes("Limite diário")) {
+          throw new Error("Limite diário de análises atingido. Tente novamente amanhã.")
+        }
+        if (message.includes("503") || message.includes("ocupados")) {
+          if (attempt < maxRetries - 1) {
+            console.log(`[AI Provider] Got 503, retrying in ${Math.pow(2, attempt)}s...`)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+            continue
+          }
+          throw new Error("Os servidores da IA estão temporariamente ocupados. Aguarde 1-2 minutos e tente novamente.")
+        }
+
+        // For other errors, retry unless it's a client error
+        if (!message.includes("400") && !message.includes("401") && attempt < maxRetries - 1) {
+          console.log(`[AI Provider] Got error: ${message}, retrying...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          continue
+        }
+
+        throw lastError
+      }
+
+      console.log(`[AI Provider] Success on attempt ${attempt + 1}`)
+      return data as GenerativeResponse
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      
+      if (attempt < maxRetries - 1) {
+        console.log(`[AI Provider] Attempt ${attempt + 1} failed, retrying...`, lastError.message)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+      }
+    }
+  }
+
+  throw lastError || new Error("Falha ao processar análise após múltiplas tentativas.")

@@ -1,44 +1,37 @@
-export interface CriticalFlaw {
-  category: 'format' | 'content' | 'keywords' | 'structure';
-  title: string;
-  description: string;
-  severity: 'high' | 'medium' | 'low';
+export interface JobRecommendation {
+  title: string
+  company: string
+  location: string
+  matchPercentage: number
+  url: string
+  source: string
 }
 
-export interface LinkedInProfile {
-  headline: string;
-  about: string;
-  experiences: { role: string; company: string; bullets: string[] }[];
+export interface GenerativeResponse {
+  atsReview: string
+  optimizedCv: string
+  jobRecommendations: JobRecommendation[]
 }
 
-export interface Job {
-  title: string;
-  company: string;
-  location: string;
-  matchPercentage: number;
-  url: string;
-  source: string;
+export interface UserProfile {
+  id: string
+  display_name?: string
+  email?: string
+  is_premium: boolean
+  cpf?: string
+  phone?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Analysis {
-  id: string;
-  userId?: string;
-  originalText: string;
-  atsScore: number;
-  criticalFlaws: CriticalFlaw[];
-  generatedResume?: string;
-  generatedLinkedIn?: LinkedInProfile;
-  suggestedJobs?: Job[];
-  createdAt: string; // ISO String instead of Timestamp for frontend portability
-}
-
-export interface User {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL?: string;
-  targetProvince: string;
-  targetNoc: string;
-  isPremium: boolean;
-  createdAt: string;
+  id?: string
+  user_id: string
+  original_text: string
+  ats_score: number
+  critical_flaws: Record<string, unknown>[]
+  generated_resume: string
+  ats_review?: string
+  suggested_jobs: JobRecommendation[]
+  created_at?: string
 }

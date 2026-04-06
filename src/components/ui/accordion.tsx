@@ -1,72 +1,75 @@
-import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
+import * as React from "react"
+import * as RadixAccordion from "@radix-ui/react-accordion"
 
 import { cn } from "@/lib/utils"
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+import { ChevronDownIcon } from "lucide-react"
 
-function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
-  return (
-    <AccordionPrimitive.Root
-      data-slot="accordion"
-      className={cn("flex w-full flex-col", className)}
-      {...props}
-    />
-  )
-}
+const Accordion = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Root>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Root>
+>(({ className, ...props }, ref) => (
+  <RadixAccordion.Root
+    ref={ref}
+    className={cn("flex w-full flex-col", className)}
+    {...props}
+  />
+))
+Accordion.displayName = "Accordion"
 
-function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
-  return (
-    <AccordionPrimitive.Item
-      data-slot="accordion-item"
-      className={cn("not-last:border-b", className)}
-      {...props}
-    />
-  )
-}
+const AccordionItem = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Item>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Item>
+>(({ className, ...props }, ref) => (
+  <RadixAccordion.Item
+    ref={ref}
+    className={cn("border-b", className)}
+    {...props}
+  />
+))
+AccordionItem.displayName = "AccordionItem"
 
-function AccordionTrigger({
-  className,
-  children,
-  ...props
-}: AccordionPrimitive.Trigger.Props) {
-  return (
-    <AccordionPrimitive.Header className="flex">
-      <AccordionPrimitive.Trigger
-        data-slot="accordion-trigger"
-        className={cn(
-          "group/accordion-trigger relative flex flex-1 items-start justify-between rounded-lg border border-transparent py-2.5 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 **:data-[slot=accordion-trigger-icon]:text-muted-foreground",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        <ChevronDownIcon data-slot="accordion-trigger-icon" className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden" />
-        <ChevronUpIcon data-slot="accordion-trigger-icon" className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline" />
-      </AccordionPrimitive.Trigger>
-    </AccordionPrimitive.Header>
-  )
-}
-
-function AccordionContent({
-  className,
-  children,
-  ...props
-}: AccordionPrimitive.Panel.Props) {
-  return (
-    <AccordionPrimitive.Panel
-      data-slot="accordion-content"
-      className="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
+const AccordionTrigger = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Trigger>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <RadixAccordion.Header className="flex">
+    <RadixAccordion.Trigger
+      ref={ref}
+      className={cn(
+        "group/accordion-trigger relative flex flex-1 items-start justify-between rounded-lg border border-transparent py-2.5 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        className
+      )}
       {...props}
     >
-      <div
-        className={cn(
-          "h-(--accordion-panel-height) pt-0 pb-2.5 data-ending-style:h-0 data-starting-style:h-0 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
-          className
-        )}
-      >
-        {children}
-      </div>
-    </AccordionPrimitive.Panel>
-  )
-}
+      {children}
+      <ChevronDownIcon className="pointer-events-none h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/accordion-trigger:rotate-180" />
+    </RadixAccordion.Trigger>
+  </RadixAccordion.Header>
+))
+AccordionTrigger.displayName = RadixAccordion.Trigger.displayName
+
+const AccordionContent = React.forwardRef<
+  React.ElementRef<typeof RadixAccordion.Content>,
+  React.ComponentPropsWithoutRef<typeof RadixAccordion.Content>
+>(({ className, children, ...props }, ref) => (
+  <RadixAccordion.Content
+    ref={ref}
+    className={cn(
+      "overflow-hidden text-sm data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up",
+      className
+    )}
+    {...props}
+  >
+    <div
+      className={cn(
+        "pb-4 pt-0 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
+        className
+      )}
+    >
+      {children}
+    </div>
+  </RadixAccordion.Content>
+))
+AccordionContent.displayName = RadixAccordion.Content.displayName
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent }

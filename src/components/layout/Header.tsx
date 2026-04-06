@@ -22,7 +22,6 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex h-16 items-center justify-between">
-        {/* Logo - Editorial Canadiana Style */}
         <Link to="/" className="flex items-baseline gap-1 group">
           <span className="font-heading font-bold text-xl tracking-tight text-foreground">
             CanadaPath
@@ -30,83 +29,75 @@ export function Header() {
           <span className="font-heading font-light text-xl tracking-tight text-primary">
             AI
           </span>
-          <span className="hidden sm:inline-block w-1.5 h-1.5 bg-primary rounded-full ml-0.5 mb-1" />
+          <span className="hidden sm:inline-block w-1.5 h-1.5 bg-primary rounded-full ml-0.5 mb-1" aria-hidden="true" />
         </Link>
 
-        {/* Navigation - Minimal Editorial */}
         <div className="flex items-center justify-end gap-2 sm:gap-4">
           {user ? (
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* User Name - Hidden on mobile */}
               <span className="hidden sm:block text-sm font-medium text-muted-foreground max-w-[150px] truncate">
                 {profile?.name || user.user_metadata?.full_name || user.email}
               </span>
-              
-              {/* Divider - Hidden on mobile */}
-              <div className="hidden sm:block w-px h-4 bg-border" />
 
-              {/* New Analysis Button */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <div className="hidden sm:block w-px h-4 bg-border" aria-hidden="true" />
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleNewAnalysis}
                 className="hidden sm:flex items-center gap-2 text-sm font-medium hover:text-primary"
               >
-                <PlusCircle className="h-4 w-4" />
+                <PlusCircle className="h-4 w-4" aria-hidden="true" />
                 Nova Análise
               </Button>
 
-              {/* Mobile-only icon button */}
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 onClick={handleNewAnalysis}
                 className="sm:hidden h-9 w-9"
-                title="Nova Análise"
+                aria-label="Nova Análise"
               >
-                <PlusCircle className="h-4 w-4" />
+                <PlusCircle className="h-4 w-4" aria-hidden="true" />
               </Button>
 
-              {/* Dashboard Button - Only for premium */}
               {profile?.is_premium && (
                 <Link to="/dashboard">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="hidden sm:flex items-center gap-2 text-sm font-medium border-border hover:border-primary hover:text-primary"
                   >
-                    <LayoutDashboard className="h-4 w-4" /> 
+                    <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                     Dashboard
                   </Button>
                 </Link>
               )}
 
-              {/* Logout Button */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleLogout}
                 className="hidden sm:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
                 Sair
               </Button>
 
-              {/* Mobile logout icon */}
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 onClick={handleLogout}
                 className="sm:hidden h-9 w-9 text-muted-foreground"
-                title="Sair"
+                aria-label="Sair da conta"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           ) : (
-            <nav className="flex items-center gap-2">
+            <nav aria-label="Navegação principal">
               <Link to="/login">
-                <Button 
+                <Button
                   size="sm"
                   className="text-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
                 >

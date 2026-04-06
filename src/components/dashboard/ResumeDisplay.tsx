@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { FileText, Loader2, Download, FileCheck } from "lucide-react"
+import { FileText, Loader2, Download, FileCheck, AlertCircle } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { parseResumeMarkdown, type StructuredResume } from "@/lib/resumeTypes"
@@ -13,6 +13,7 @@ interface ResumeDisplayProps {
 
 export function ResumeDisplay({ content }: ResumeDisplayProps) {
   const [downloading, setDownloading] = useState<"pdf" | "word" | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [parsedResume, setParsedResume] = useState<StructuredResume | null>(null)
   const resumeRef = useRef<HTMLDivElement>(null)
 
@@ -30,11 +31,11 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
 
   const handleDownloadPdf = async () => {
     setDownloading("pdf")
+    setDownloadError(null)
     try {
       if (parsedResume) {
         await downloadPdf(parsedResume, "Canadian_Resume.pdf")
       } else {
-        // Fallback: use html2pdf for raw markdown
         if (!resumeRef.current) throw new Error("Resume element not found")
         const html2pdf = (await import("html2pdf.js")).default
         const opt = {
@@ -48,7 +49,7 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
       }
     } catch (err) {
       console.error("Erro ao gerar PDF:", err)
-      alert("Erro ao gerar PDF. Tente o formato Word.")
+      setDownloadError("Erro ao gerar PDF. Tente o formato Word.")
     } finally {
       setDownloading(null)
     }
@@ -56,24 +57,28 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
 
   const handleDownloadWord = async () => {
     setDownloading("word")
+    setDownloadError(null)
     try {
       if (parsedResume) {
         await downloadDocx(parsedResume, "Canadian_Resume.docx")
       } else {
-        // Fallback: use raw docx generation from markdown
         await downloadDocxFromMarkdown(content)
       }
     } catch (err) {
       console.error("Erro ao gerar Word:", err)
-      alert("Erro ao gerar Word. Tente o formato PDF.")
+      setDownloadError("Erro ao gerar Word. Tente o formato PDF.")
     } finally {
       setDownloading(null)
     }
   }
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(content)
-    alert("Currículo copiado!")
+  const handleCopyText = async () => {
+    setDownloadError(null)
+    try {
+      await navigator.clipboard.writeText(content)
+    } catch {
+      setDownloadError("Não foi possível copiar. Selecione o texto manualmente.")
+    }
   }
 
   return (
@@ -88,12 +93,13 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
           <Button
             variant="outline"
             onClick={handleDownloadPdf}
-            disabled={downloading === "pdf"}
+            disabled={!!downloading}
+            aria-label="Baixar currículo em PDF"
           >
             {downloading === "pdf" ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
             ) : (
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4 mr-2" aria-hidden="true" />
             )}
             Baixar PDF
           </Button>
@@ -101,28 +107,35 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
           <Button
             variant="outline"
             onClick={handleDownloadWord}
-            disabled={downloading === "word"}
+            disabled={!!downloading}
+            aria-label="Baixar currículo em Word"
           >
             {downloading === "word" ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
             ) : (
-              <FileCheck className="h-4 w-4 mr-2" />
+              <FileCheck className="h-4 w-4 mr-2" aria-hidden="true" />
             )}
             Baixar Word
           </Button>
 
-          <Button onClick={handleCopyText}>
-            <FileText className="h-4 w-4 mr-2" />
+          <Button onClick={handleCopyText} aria-label="Copiar todo o texto do currículo">
+            <FileText className="h-4 w-4 mr-2" aria-hidden="true" />
             Copiar Tudo
           </Button>
         </div>
       </div>
 
-      {/* Structured preview (if parsed successfully) */}
+      {downloadError && (
+        <div role="alert" className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{downloadError}</span>
+        </div>
+      )}
+
       {parsedResume && (
         <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
-            <FileCheck className="h-4 w-4 text-blue-600" />
+            <FileCheck className="h-4 w-4 text-blue-600" aria-hidden="true" />
             <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
               Currículo estruturado detectado — PDF e Word profissionais disponíveis
             </span>
@@ -133,7 +146,6 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
         </div>
       )}
 
-      {/* Markdown preview */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
         <div
           ref={resumeRef}
@@ -151,15 +163,12 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
   )
 }
 
-/**
- * Fallback DOCX generation from raw markdown (when parsing fails)
- */
 async function downloadDocxFromMarkdown(content: string): Promise<void> {
   const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = await import("docx")
   const { saveAs } = await import("file-saver")
 
   const lines = content.split("\n")
-  const children: any[] = []
+  const children: unknown[] = []
 
   for (const line of lines) {
     const trimmed = line.trim()
@@ -273,7 +282,7 @@ async function downloadDocxFromMarkdown(content: string): Promise<void> {
             margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 },
           },
         },
-        children,
+        children: children as ConstructorParameters<typeof Document>[0]["sections"][0]["children"],
       },
     ],
   })

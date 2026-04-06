@@ -1,9 +1,8 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 export function cleanResumeText(text: string): string {
   if (!text) return ''
-  
+
   return String(text)
     .replace(/pasted-image\d*/gi, '')
     .replace(/data:image\S*/gi, '')
@@ -20,42 +19,35 @@ export interface WizardState {
   currentStep: number;
   noc: string;
   province: string;
+  city: string;
+  resumeText: string;
   isLoading: boolean;
-  
+
   setStep: (step: number) => void;
-  setContext: (noc: string, province: string) => void;
+  setContext: (noc: string, province: string, city?: string) => void;
+  setResumeText: (text: string) => void;
   setIsLoading: (loading: boolean) => void;
   reset: () => void;
 }
 
-// Store SIMPLIFICADO - sem persistir dados do currículo
-// Isso evita problemas de contaminação
-export const useWizardStore = create<WizardState>()(
-  persist(
-    (set) => ({
-      currentStep: 1,
-      noc: '',
-      province: '',
-      isLoading: false,
+export const useWizardStore = create<WizardState>()((set) => ({
+  currentStep: 1,
+  noc: '',
+  province: '',
+  city: '',
+  resumeText: '',
+  isLoading: false,
 
-      setStep: (step) => set({ currentStep: step }),
-      setContext: (noc, province) => set({ noc, province }),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      reset: () => set({
-        currentStep: 1,
-        noc: '',
-        province: '',
-        isLoading: false,
-      }),
-    }),
-    {
-      name: 'canadapath-wizard-storage',
-      partialize: (state) => ({
-        // Only persist minimal navigation data
-        currentStep: state.currentStep,
-        noc: state.noc,
-        province: state.province,
-      }),
-    }
-  )
-)
+  setStep: (step) => set({ currentStep: step }),
+  setContext: (noc, province, city = '') => set({ noc, province, city }),
+  setResumeText: (text) => set({ resumeText: text }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  reset: () => set({
+    currentStep: 1,
+    noc: '',
+    province: '',
+    city: '',
+    resumeText: '',
+    isLoading: false,
+  }),
+}))

@@ -13,13 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+
 
 const contextSchema = z.object({
   noc: z.string().min(4, "O NOC geralmente possui no mínimo 4 dígitos ou um código descritivo de profissão."),
@@ -37,6 +31,9 @@ const PROVINCES = [
   "New Brunswick (NB)",
   "Prince Edward Island (PE)",
   "Newfoundland and Labrador (NL)",
+  "Yukon (YT)",
+  "Northwest Territories (NT)",
+  "Nunavut (NU)",
 ]
 
 export function StepContext() {
@@ -89,20 +86,20 @@ export function StepContext() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Província ou Território de Chegada</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione sua província alvo" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {PROVINCES.map((prov) => (
-                      <SelectItem key={prov} value={prov}>
-                        {prov}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <div className="relative">
+                    <Input 
+                      placeholder="Digite ou selecione sua província alvo" 
+                      list="provinces-list"
+                      {...field} 
+                    />
+                    <datalist id="provinces-list">
+                      {PROVINCES.map((prov) => (
+                        <option key={prov} value={prov} />
+                      ))}
+                    </datalist>
+                  </div>
+                </FormControl>
                 <FormDescription>
                   O comportamento de RH varia muito do Quebec (ex: francês) para Ontario.
                 </FormDescription>

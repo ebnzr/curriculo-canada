@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react"
 import { Layout } from "@/components/layout/Layout"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { Loader2 } from "lucide-react"
-import './App.css'
 
 const Home = lazy(() => import("@/pages/Home").then(m => ({ default: m.Home })))
 const Login = lazy(() => import("@/pages/Login").then(m => ({ default: m.Login })))

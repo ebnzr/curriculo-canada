@@ -1,6 +1,11 @@
-import { Sparkles, FileText, TrendingUp, Clock } from "lucide-react"
+import { Sparkles, FileText, TrendingUp, Clock, ArrowRight } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 
 export function Hero() {
+  const { user, loading } = useAuth()
+
   return (
     <section className="relative overflow-hidden">
       {/* Subtle Background Pattern */}
@@ -63,13 +68,32 @@ export function Hero() {
             </p>
 
             {/* CTA Button */}
-            <a
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-200 hover:bg-primary/90 hover:shadow-primary/35 hover:-translate-y-0.5"
-            >
-              <Sparkles className="h-4 w-4" />
-              Faça login para analisar seu currículo
-            </a>
+            {loading ? (
+              <div className="h-11 w-48 bg-primary/20 rounded-lg animate-pulse" aria-hidden="true" />
+            ) : user ? (
+              <Button
+                asChild
+                size="lg"
+                className="gap-2 rounded-lg shadow-lg shadow-primary/25 hover:shadow-primary/35 hover:-translate-y-0.5"
+              >
+                <Link to="/analyze">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  Analisar meu Currículo
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                asChild
+                size="lg"
+                className="gap-2 rounded-lg shadow-lg shadow-primary/25 hover:shadow-primary/35 hover:-translate-y-0.5"
+              >
+                <Link to="/login">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  Faça login para analisar seu currículo
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* Stats Row - Centered Below */}

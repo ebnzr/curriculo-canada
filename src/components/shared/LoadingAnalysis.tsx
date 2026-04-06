@@ -6,16 +6,21 @@ interface LoadingAnalysisProps {
   showProgress?: boolean
 }
 
-export function LoadingAnalysis({ 
+export function LoadingAnalysis({
   message = "A IA está processando seu Currículo...",
   submessage = "Estamos reestruturando suas experiências para o padrão canadense. Isso leva cerca de 20 a 40 segundos.",
   showProgress = true
 }: LoadingAnalysisProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center p-4">
-      <div className="relative">
+    <div
+      className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center p-4"
+      role="status"
+      aria-live="polite"
+      aria-label={message}
+    >
+      <div className="relative" aria-hidden="true">
         <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
-        <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
+        <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" aria-hidden="true" />
       </div>
       <div className="space-y-4 max-w-md mx-auto">
         <h2 className="text-3xl font-black tracking-tight">
@@ -25,7 +30,7 @@ export function LoadingAnalysis({
           "{submessage}"
         </p>
         {showProgress && (
-          <div className="pt-6 flex flex-col items-center space-y-4">
+          <div className="pt-6 flex flex-col items-center space-y-4" aria-hidden="true">
             <div className="flex gap-3">
               <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
               <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>

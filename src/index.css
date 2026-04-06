@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 /* ============================================
    EDITORIAL CANADIANA - DESIGN SYSTEM
@@ -79,41 +78,6 @@
     --radius-4xl: 2rem;
 }
 
-:root {
-    --background: #FAFAF9;
-    --foreground: #0F0F0F;
-    --card: #FFFFFF;
-    --card-foreground: #0F0F0F;
-    --popover: #FFFFFF;
-    --popover-foreground: #0F0F0F;
-    --primary: #C41E3A;
-    --primary-foreground: #FAFAF9;
-    --secondary: #1A1A1A;
-    --secondary-foreground: #FAFAF9;
-    --muted: #F5F5F4;
-    --muted-foreground: #78716C;
-    --accent: #F5F5F4;
-    --accent-foreground: #0F0F0F;
-    --destructive: #DC2626;
-    --border: #E7E5E4;
-    --input: #E7E5E4;
-    --ring: #C41E3A;
-    --radius: 0.5rem;
-    --chart-1: #C41E3A;
-    --chart-2: #0F0F0F;
-    --chart-3: #78716C;
-    --chart-4: #A8A29E;
-    --chart-5: #D6D3D1;
-    --sidebar: #FAFAF9;
-    --sidebar-foreground: #0F0F0F;
-    --sidebar-primary: #C41E3A;
-    --sidebar-primary-foreground: #FAFAF9;
-    --sidebar-accent: #F5F5F4;
-    --sidebar-accent-foreground: #0F0F0F;
-    --sidebar-border: #E7E5E4;
-    --sidebar-ring: #C41E3A;
-}
-
 .dark {
     --background: #0F0F0F;
     --foreground: #FAFAF9;
@@ -144,8 +108,12 @@
 }
 
 @layer base {
+    *:focus-visible {
+        @apply outline-ring/50;
+    }
+
     * {
-        @apply border-border outline-ring/50;
+        @apply border-border;
     }
     
     html {
@@ -307,6 +275,11 @@
 }
 
 /* Animation Keyframes */
+@keyframes progress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(0); }
+}
+
 @keyframes fade-in-up {
     from {
         opacity: 0;
@@ -329,6 +302,10 @@
 
 .animate-fade-in-up {
     animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-progress {
+    animation: progress 2s ease-in-out infinite;
 }
 
 .animate-draw-line {

@@ -5,7 +5,7 @@ import type { User } from '@supabase/supabase-js';
 export interface UserProfile {
   id: string;
   display_name?: string;
-  name?: string; // For backward compatibility in frontend
+  name?: string;
   email?: string;
   is_premium: boolean;
   updated_at?: string;
@@ -19,6 +19,26 @@ export function useAuth() {
   useEffect(() => {
     let active = true;
 
+    async function fetchProfile(currentUser: User): Promise<void> {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!active) return;
+
+      if (data) {
+        setProfile({ ...data, name: data.display_name });
+      } else {
+        setProfile({
+          id: currentUser.id,
+          name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
+          is_premium: false,
+        });
+      }
+    }
+
     async function fetchSession() {
       const timeoutId = setTimeout(() => {
         if (active) setLoading(false);
@@ -27,26 +47,12 @@ export function useAuth() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user ?? null;
-        
+
         if (!active) return;
-        
+
         setUser(currentUser);
         if (currentUser) {
-          const { data } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id);
-          
-          const profileData = data?.[0] || null;
-          if (profileData && active) {
-            setProfile({ ...profileData, name: profileData.display_name });
-          } else if (currentUser && active) {
-            setProfile({ 
-              id: currentUser.id, 
-              name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
-              is_premium: false 
-            } as UserProfile);
-          }
+          await fetchProfile(currentUser);
         } else {
           setProfile(null);
         }
@@ -60,29 +66,17 @@ export function useAuth() {
 
     fetchSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+
       const currentUser = session?.user ?? null;
       if (!active) return;
-      
+
       setUser(currentUser);
-      
-      if (currentUser) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentUser.id);
-        
-        const profileData = data?.[0] || null;
-        if (profileData && active) {
-          setProfile({ ...profileData, name: profileData.display_name });
-        } else if (active) {
-          setProfile({ 
-            id: currentUser.id, 
-            name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
-            is_premium: false 
-          } as UserProfile);
-        }
-      } else if (active) {
+
+      if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
+        await fetchProfile(currentUser);
+      } else if (!currentUser) {
         setProfile(null);
       }
     });
@@ -95,14 +89,14 @@ export function useAuth() {
 
   const loginWithGoogle = () => supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: import.meta.env.VITE_APP_URL }
+    options: { redirectTo: import.meta.env.VITE_APP_URL },
   });
 
-  const logout = () => {
-     setUser(null);
-     setProfile(null);
-     supabase.auth.signOut();
-  }
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  };
 
   return { user, profile, loading, loginWithGoogle, logout };
 }

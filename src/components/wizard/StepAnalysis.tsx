@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useWizardStore } from "@/stores/wizardStore"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
@@ -6,17 +6,17 @@ import { supabase } from "@/lib/supabase"
 import { useNavigate } from "react-router-dom"
 import { Loader2, Sparkles } from "lucide-react"
 import { generateAllContent } from "@/lib/aiProvider"
-import type { GenerativeResponse } from "@/hooks/useGemini"
 
 export function StepAnalysis() {
-  const { noc, province } = useWizardStore()
+  const { noc, province, city, resumeText } = useWizardStore()
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState("Iniciando análise...")
-  const [authChecked, setAuthChecked] = useState(false)
+
+  const hasRun = useRef(false)
 
   useEffect(() => {
     if (authLoading) {
@@ -24,45 +24,20 @@ export function StepAnalysis() {
       return
     }
 
-    if (!authChecked) {
-      setAuthChecked(true)
-      console.log("=== STEPANALYSIS - Auth checked ===");
-      console.log("User:", user?.id);
-    }
+    if (hasRun.current) return
+    hasRun.current = true
 
     if (!user) {
-      console.log("=== USER NOT AUTHENTICATED ===");
       setError("Usuário não autenticado. Faça login novamente.")
       setLoading(false)
       return
     }
 
     const runAnalysis = async () => {
-      console.log("=== RUNANALYSIS STARTED ===");
-      const stored = sessionStorage.getItem('wizardBackup')
-      const storedData = stored ? JSON.parse(stored) : {}
-      let resumeText = (storedData.resumeText || '').trim()
-      
-      console.log("=== RAW RESUMETEXT FROM STORAGE ===");
-      console.log("Length:", resumeText.length);
-      console.log("Contains pasted-image?", resumeText.includes('pasted-image'));
-      
-      resumeText = String(resumeText)
-        .replace(/pasted-image\d*/gi, '')
-        .replace(/data:image\S*/gi, '')
-        .replace(/data:application\S*/gi, '')
-        .replace(/\[image[^\]]*\]/gi, '')
-        .replace(/\[.*?\]/gi, '')
-        .replace(/png|jpg|jpeg|gif|bmp|webp/gi, '')
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-      
-      console.log("=== AFTER CLEANING ===");
-      console.log("Length:", resumeText.length);
+      const cleanedText = (resumeText || '').trim()
 
-      if (!resumeText || resumeText.length < 50) {
-        setError("Currículo não encontrado. Por favor, faça o upload novamente.")
+      if (!cleanedText || cleanedText.length < 50) {
+        setError("Currículo não encontrado. Por favor, volte e faça o upload novamente.")
         setLoading(false)
         return
       }
@@ -80,42 +55,40 @@ export function StepAnalysis() {
       const interval = setInterval(() => {
         msgIndex++
         if (msgIndex < messages.length) {
-          setProgress(msgIndex * 15)
+          setProgress(Math.min(msgIndex * 15, 90))
           setStatusMessage(messages[msgIndex])
         }
       }, 2000)
 
       try {
-        setStatusMessage("Conectando aos servidores da IA...");
-        console.log("=== INICIANDO ANÁLISE ===");
+        setStatusMessage("Conectando aos servidores da IA...")
 
-        const result: GenerativeResponse = await generateAllContent(
-          resumeText,
+        const result = await generateAllContent(
+          cleanedText,
           noc || "General",
-          province || "Canada"
+          province || "Canada",
+          city || undefined
         )
 
-        console.log("Análise concluída!")
-
-        const { error: insertError } = await supabase.from('analyses').insert({
+        const { error: dbError } = await supabase.from('analyses').upsert({
           user_id: user.id,
-          original_text: resumeText,
+          original_text: cleanedText,
           ats_score: 65,
           critical_flaws: [],
           generated_resume: result.optimizedCv,
           ats_review: result.atsReview,
           suggested_jobs: result.jobRecommendations
-        })
+        }, { onConflict: 'user_id' })
 
-        if (insertError) {
-          console.error("Erro ao salvar análise:", insertError)
+        if (dbError) {
+          console.error("Erro ao salvar análise:", dbError)
           throw new Error("Erro ao salvar análise no banco de dados.")
         }
 
         clearInterval(interval)
         setProgress(100)
         setStatusMessage("Análise concluída! Redirecionando...")
-        
+
         setTimeout(() => {
           navigate('/dashboard?success=true')
         }, 1000)
@@ -130,17 +103,17 @@ export function StepAnalysis() {
     }
 
     runAnalysis()
-  }, [authLoading, user, noc, province, navigate, authChecked])
+  }, [authLoading, user, noc, province, navigate, resumeText])
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]" role="status" aria-live="polite">
         <div className="relative flex items-center justify-center mb-8">
-          <Loader2 className="h-16 w-16 text-primary animate-spin" />
-          <Sparkles className="h-6 w-6 text-primary absolute animate-pulse" />
+          <Loader2 className="h-16 w-16 text-primary animate-spin" aria-hidden="true" />
+          <Sparkles className="h-6 w-6 text-primary absolute animate-pulse" aria-hidden="true" />
         </div>
         <h3 className="text-xl font-bold animate-pulse text-foreground">
-          {progress < 20 ? "Lendo seu currículo..." : 
+          {progress < 20 ? "Lendo seu currículo..." :
            progress < 40 ? "Analisando compatibilidade com ATS..." :
            progress < 60 ? "Verificando keywords..." :
            progress < 80 ? "Gerando currículo otimizado..." :
@@ -152,10 +125,10 @@ export function StepAnalysis() {
         <p className="text-muted-foreground mt-2 text-sm text-center max-w-sm">
           Estamos processando seu currículo para o padrão canadense. Isso leva cerca de 20-40 segundos.
         </p>
-        <div className="w-full max-w-xs mt-6">
+        <div className="w-full max-w-xs mt-6" aria-hidden="true">
           <div className="bg-secondary h-2 rounded-full overflow-hidden">
-            <div 
-              className="bg-primary h-full transition-all duration-500" 
+            <div
+              className="bg-primary h-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -169,7 +142,7 @@ export function StepAnalysis() {
     return (
       <div className="p-6 md:p-8 text-center space-y-4">
         <div className="bg-destructive/10 p-4 rounded-full inline-block">
-          <Loader2 className="h-8 w-8 text-destructive" />
+          <Loader2 className="h-8 w-8 text-destructive" aria-hidden="true" />
         </div>
         <h2 className="text-xl font-bold text-destructive">Erro na Análise</h2>
         <p className="text-muted-foreground">{error}</p>

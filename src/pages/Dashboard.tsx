@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/useAuth"
-import { Sparkles, Loader2, FileCheck, PartyPopper, CheckCircle } from "lucide-react"
-import { useSearchParams } from "react-router-dom"
+import { Sparkles, Loader2, FileCheck, PartyPopper, CheckCircle, FileText, Zap, Briefcase } from "lucide-react"
+import { useSearchParams, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
-import { useWizardStore } from "@/stores/wizardStore"
 import { Button } from "@/components/ui/button"
 import { TabResume } from "@/components/dashboard/TabResume"
 import { TabReview } from "@/components/dashboard/TabReview"
@@ -29,16 +28,15 @@ export function Dashboard() {
   const [generating, setGenerating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [searchParams] = useSearchParams()
-  
-  const { noc, province } = useWizardStore()
+  const navigate = useNavigate()
+
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   const loadAnalysis = useCallback(async () => {
     if (!user) return
     setFetchError(null)
-    
+
     try {
-      // Buscar dados do banco
       const { data: dbData, error: dbError } = await supabase
         .from('analyses')
         .select('*')
@@ -47,12 +45,10 @@ export function Dashboard() {
         .limit(1)
 
       if (dbError) throw dbError
-      
-      // Se tem dados no banco, usar
+
       if (dbData && dbData.length > 0) {
-        const data = dbData[0]
-        
-        // Only remove image/data artifacts, preserve markdown formatting (newlines, brackets, etc.)
+        const row = dbData[0]
+
         const cleanText = (text: string) => {
           return (text || '')
             .replace(/pasted-image\d*/gi, '')
@@ -62,61 +58,35 @@ export function Dashboard() {
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
             .trim()
         }
-        
+
         setData({
-          ...data,
-          original_text: cleanText(data.original_text),
-          generated_resume: cleanText(data.generated_resume),
-          ats_review: cleanText(data.ats_review),
+          ...row,
+          original_text: cleanText(row.original_text),
+          generated_resume: cleanText(row.generated_resume),
+          ats_review: cleanText(row.ats_review),
         })
         setLoading(false)
         return
       }
 
-// Sem dados no banco - usuário precisa fazer análise primeiro
       console.log("Nenhuma análise encontrada. Usuário precisa fazer análise.")
-
-  } catch (e: unknown) {
+    } catch (e: unknown) {
       const error = e instanceof Error ? e : new Error(String(e))
-      console.error("Dashboard Error:", error);
-      let msg = "Ocorreu um erro ao processar sua análise. "
-      
-      if (error.message?.includes("404")) {
-        msg += "Erro 404: O Google não encontrou o modelo de IA. Verifique se a 'Generative Language API' está ativada no seu console do Google e se sua chave de API no .env é válida."
-      } else {
-        msg += (error.message || "Tente novamente em instantes.")
-      }
-      
-      setFetchError(msg)
-
-      try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`)
-        const debugData = await resp.json()
-        console.log("Modelos disponíveis:", debugData)
-        if (debugData.models) {
-          const names = debugData.models.map((m: { name: string }) => m.name.replace('models/', ''))
-          console.warn("Nomes de modelos detectados:", names)
-        }
-      } catch (innerE) {
-        const innerError = innerE instanceof Error ? innerE : new Error(String(innerE))
-        console.error("Erro ao listar modelos:", innerError)
-      }
-
+      console.error("Dashboard Error:", error)
+      setFetchError("Ocorreu um erro ao carregar sua análise. " + (error.message || "Tente novamente em instantes."))
     } finally {
       setGenerating(false)
       setLoading(false)
     }
-  }, [user, profile?.is_premium, noc, province])
+  }, [user])
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
-    
+
     if (authLoading) return
-    
+
     if (searchParams.get('success') === 'true') {
       setShowSuccess(true)
-      // Limpar URL para não mostrar modal novamente ao atualizar página
       window.history.replaceState({}, '', '/dashboard')
     }
 
@@ -125,15 +95,15 @@ export function Dashboard() {
     } else {
       setLoading(false)
     }
-  }, [user, profile?.is_premium, authLoading, searchParams, loadAnalysis])
+  }, [user, authLoading, searchParams, loadAnalysis])
 
   const successModal = showSuccess && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl bg-primary/5 animate-in zoom-in duration-500">
       <div className="bg-background border border-primary/20 shadow-[0_0_50px_rgba(var(--primary-rgb),0.2)] rounded-3xl p-8 max-w-md w-full text-center space-y-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse"></div>
-        
+
         <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
-          <PartyPopper className="h-10 w-10 text-primary" />
+          <PartyPopper className="h-10 w-10 text-primary" aria-hidden="true" />
         </div>
 
         <div className="space-y-2">
@@ -149,7 +119,7 @@ export function Dashboard() {
 
         <Button onClick={() => setShowSuccess(false)} className="w-full h-12 rounded-xl text-base font-extrabold shadow-lg shadow-primary/20 group">
           Explorar Meu Dashboard
-          <CheckCircle className="ml-2 h-5 w-5 group-hover:scale-125 transition-transform" />
+          <CheckCircle className="ml-2 h-5 w-5 group-hover:scale-125 transition-transform" aria-hidden="true" />
         </Button>
       </div>
     </div>
@@ -159,22 +129,22 @@ export function Dashboard() {
     return (
       <div className="min-h-screen bg-background">
         {successModal}
-        <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center p-4">
+        <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-8 text-center p-4" role="status" aria-live="polite">
           <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
-            <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
+            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" aria-hidden="true"></div>
+            <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" aria-hidden="true" />
           </div>
           <div className="space-y-4 max-w-md mx-auto">
             <h2 className="text-3xl font-black tracking-tight">
               {generating ? "A IA está processando seu Currículo..." : "Conectando ao sistema..."}
             </h2>
             <p className="text-muted-foreground text-lg italic leading-relaxed">
-              {generating 
-                ? "Estamos reestruturando suas experiências para o padrão canadense. Isso leva cerca de 20 a 40 segundos." 
+              {generating
+                ? "Estamos reestruturando suas experiências para o padrão canadense. Isso leva cerca de 20 a 40 segundos."
                 : "\"A paciência é amarga, mas seu fruto é doce.\" — Jean-Jacques Rousseau"}
             </p>
             {generating && (
-              <div className="pt-6 flex flex-col items-center space-y-4">
+              <div className="pt-6 flex flex-col items-center space-y-4" aria-hidden="true">
                 <div className="flex gap-3">
                   <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                   <span className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
@@ -199,38 +169,38 @@ export function Dashboard() {
         {successModal}
         <div className="container mx-auto max-w-2xl py-20 px-4 text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="bg-muted w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
-            <FileCheck className="h-12 w-12 text-muted-foreground" />
+            <FileCheck className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
           </div>
           <div className="space-y-3">
             <h2 className="text-3xl font-black">Nenhum resultado encontrado</h2>
             <p className="text-muted-foreground text-lg">
-              {isPremium 
+              {isPremium
                 ? "Você é um membro Premium, mas não encontramos sua análise. Vamos gerá-la agora?"
                 : "Parece que você ainda não tem uma análise completa. Comece agora para formatar seu currículo para o Canadá."}
             </p>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             {isPremium ? (
-              <Button size="lg" onClick={() => window.location.href='/analyze'} disabled={generating} className="h-14 px-8 rounded-2xl font-bold shadow-xl shadow-primary/20">
-                {generating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
+              <Button size="lg" onClick={() => navigate('/analyze')} disabled={generating} className="h-14 px-8 rounded-2xl font-bold shadow-xl shadow-primary/20">
+                {generating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" /> : <Sparkles className="mr-2 h-5 w-5" aria-hidden="true" />}
                 Gerar Análise com IA Agora
               </Button>
             ) : (
-              <Button size="lg" onClick={() => window.location.href='/analyze'} className="h-14 px-8 rounded-2xl font-bold">
+              <Button size="lg" onClick={() => navigate('/analyze')} className="h-14 px-8 rounded-2xl font-bold">
                 Iniciar Nova Análise
               </Button>
             )}
           </div>
 
           {fetchError && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm font-medium animate-in fade-in zoom-in duration-300">
+            <div
+              role="alert"
+              className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm font-medium animate-in fade-in zoom-in duration-300"
+            >
               <p>{fetchError}</p>
-              <div className="mt-2 pt-2 border-t border-destructive/10 opacity-50 text-[10px]">
-                Debug (API Key detectada): {import.meta.env.VITE_GEMINI_API_KEY ? `${import.meta.env.VITE_GEMINI_API_KEY.substring(0, 6)}...${import.meta.env.VITE_GEMINI_API_KEY.slice(-4)}` : "NÃO DETECTADA"}
-              </div>
               {fetchError.includes("Não encontramos o texto") && (
-                <Button variant="link" onClick={() => window.location.href='/analyze'} className="text-destructive font-bold p-0 h-auto mt-1">
+                <Button variant="link" onClick={() => navigate('/analyze')} className="text-destructive font-bold p-0 h-auto mt-1">
                   Voltar para o início e colar currículo
                 </Button>
               )}
@@ -248,7 +218,7 @@ export function Dashboard() {
         <div>
           <div className="flex flex-wrap items-center gap-3 mb-2">
             <div className="bg-primary/20 p-2 rounded-full">
-              <Sparkles className="w-6 h-6 text-primary" />
+              <Sparkles className="w-6 h-6 text-primary" aria-hidden="true" />
             </div>
             <p className="text-sm font-bold text-primary tracking-wider uppercase">Acesso Premium Ativo</p>
             <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
@@ -260,19 +230,25 @@ export function Dashboard() {
         </div>
 
         <Tabs defaultValue="optimized" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto sm:h-14 bg-muted/40 rounded-xl p-1 border">
-            <TabsTrigger value="optimized" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm py-2">
-              Currículo Otimizado
+          <TabsList className="grid w-full grid-cols-3 h-auto bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-1.5 border-2 border-primary/20 shadow-lg shadow-primary/5">
+            <TabsTrigger value="optimized" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Currículo Otimizado</span>
+              <span className="sm:hidden">Otimizado</span>
             </TabsTrigger>
-            <TabsTrigger value="review" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm py-2">
-              Raio-X (Original)
+            <TabsTrigger value="review" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Raio-X (Original)</span>
+              <span className="sm:hidden">Raio-X</span>
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm py-2">
-              Vagas e Oportunidades
+            <TabsTrigger value="jobs" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              <span className="hidden sm:inline">Vagas e Oportunidades</span>
+              <span className="sm:hidden">Vagas</span>
             </TabsTrigger>
           </TabsList>
-          
-          <div className="mt-6 border border-border/50 rounded-2xl bg-card shadow-sm p-6 sm:p-8 min-h-[500px]">
+
+          <div className="mt-8 border-2 border-primary/20 rounded-2xl bg-gradient-to-br from-card to-card/50 shadow-xl shadow-primary/10 p-6 sm:p-8 min-h-[500px]">
             <TabsContent value="optimized" className="mt-0">
               <TabResume content={data?.generated_resume || ""} />
             </TabsContent>

@@ -5,10 +5,16 @@ export function Footer() {
         <p className="text-center md:text-left">
           &copy; {new Date().getFullYear()} CanadaPath AI. Otimize seu currículo com inteligência analítica.
         </p>
-        <div className="flex gap-4">
-          <a href="#" className="hover:underline underline-offset-4">Privacidade</a>
-          <a href="#" className="hover:underline underline-offset-4">Termos</a>
-        </div>
+        <nav aria-label="Links do rodapé">
+          <ul className="flex gap-4 list-none m-0 p-0">
+            <li>
+              <a href="/privacidade" className="hover:underline underline-offset-4">Privacidade</a>
+            </li>
+            <li>
+              <a href="/termos" className="hover:underline underline-offset-4">Termos</a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </footer>
   )
