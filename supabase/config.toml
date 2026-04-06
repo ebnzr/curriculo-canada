@@ -394,3 +394,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./declarative"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[edge_runtime.secrets]
+GROQ_API_KEY = "env(GROQ_API_KEY)"
+GEMINI_API_KEY = "env(GEMINI_API_KEY)"
+SUPABASE_URL = "env(SUPABASE_URL)"
+SUPABASE_SERVICE_ROLE_KEY = "env(SUPABASE_SERVICE_ROLE_KEY)"
