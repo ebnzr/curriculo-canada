@@ -48,7 +48,7 @@
 
 | Camada        | Tecnologia                          |
 |---------------|-------------------------------------|
-| Framework     | React 18 + TypeScript (Vite 6)      |
+| Framework     | React 18 + TypeScript (Vite 5.4) ⚠️ **Não atualizar para Vite 8** |
 | Estilização   | Tailwind CSS 4 + shadcn/ui          |
 | Roteamento    | React Router v7                     |
 | Estado        | Zustand                             |
@@ -99,6 +99,49 @@ npm install react-hook-form zod @hookform/resolvers
 ```bash
 npx shadcn@latest init
 npx shadcn@latest add button card input label tabs progress dialog badge separator textarea select
+```
+
+---
+
+## ⚠️ NOTA IMPORTANTE: Restrições de Versão (Windows)
+
+> **⚡ ATENÇÃO para IAs e Desenvolvedores futuros:**
+> 
+> Este projeto possui **restrições de versão específicas** que devem ser mantidas para garantir compatibilidade com Windows. Não atualize estas versões sem testar exaustivamente.
+
+### Versões Fixas Obrigatórias
+
+| Pacote | Versão Atual | Versão Proibida | Motivo |
+|--------|--------------|-----------------|--------|
+| `vite` | `^5.4.0` | `^8.x` | Vite 8 usa `rolldown` que tem bugs críticos de resolução de módulos no Windows (falha ao resolver `fdir/dist/index.mjs`, `@rollup/rollup-win32-x64-msvc`, etc.) |
+| `@vitejs/plugin-react` | `^4.3.0` | `^6.x` | Requer Vite 8, que é incompatível |
+| `@tailwindcss/vite` | `^^4.0.0` | `^4.2.x` | Versões mais recentes podem causar conflitos com Vite 5 |
+
+### Erros Conhecidos se as versões forem atualizadas
+
+```
+Error: Cannot find module '.../node_modules/fdir/dist/index.mjs'
+Error: Cannot find module @rollup/rollup-win32-x64-msvc
+Error: Build failed with 1 error: [UNRESOLVED_IMPORT] Could not resolve './cjs/react-dom-client.development.js'
+```
+
+### Instruções de Manutenção
+
+1. **Sempre** mantenha `package.json` com as versões fixas listadas acima
+2. Se precisar de features do Vite 8+, considere migrar para um ambiente WSL2 ou Docker
+3. Ao reinstalar dependências, use `npm ci` ou delete `node_modules` completamente antes
+
+### Como verificar se está correto
+
+```bash
+npm list vite @vitejs/plugin-react @tailwindcss/vite
+```
+
+Saída esperada:
+```
+├── @tailwindcss/vite@4.0.0
+├── @vitejs/plugin-react@4.3.0
+├── vite@5.4.21
 ```
 
 ---
@@ -196,13 +239,15 @@ src/
 **Step 4 — Paywall:**
 - Login com Google → Stripe Checkout → Redireciona ao Dashboard
 
-### 5.3 Dashboard (`/dashboard`) — 3 Abas
+### 5.3 Dashboard (`/dashboard`) — 4 Abas
 
-**Aba 1 — CV:** Markdown renderizado + Exportar PDF + Copiar
+**Aba 1 — Raio-X (Original):** Avaliação ATS detalhada do currículo original em Markdown
 
-**Aba 2 — LinkedIn:** Cards (Headline, About, Experiências) + Copiar cada
+**Aba 2 — Currículo Otimizado:** Markdown renderizado + Exportar PDF + Copiar
 
-**Aba 3 — Vagas:** Lista de cards com Título, Empresa, Match %, Link externo
+**Aba 3 — Perfil LinkedIn:** Cards copiáveis (Headline, About, Experiências, Educação, Skills, Certificações, Idiomas)
+
+**Aba 4 — Vagas:** Lista de cards com Título, Empresa, Match %, Link externo
 
 ---
 
@@ -397,19 +442,19 @@ export async function callGemini(prompt: string): Promise<string> {
 
 ### 9.2 Prompts
 
-**Prompt 1 — Análise ATS:**
-> Analise o currículo e retorne JSON: `{ atsScore: number, criticalFlaws: CriticalFlaw[] }`. Critérios: sem foto, verbos de ação, métricas, keywords NOC, formato cronológico reverso.
+**Prompt 1 — Raio-X ATS (Avaliação do Original):**
+> Avaliação completa e estruturada com 5 seções: (1) Diagnóstico Rápido — problemas críticos, (2) Análise Detalhada — formatação, verbos de ação, métricas e keywords NOC, (3) **Certificações e Credenciais Recomendadas** — certificações obrigatórias, recomendadas e complementares específicas para o NOC e província, aplicáveis a QUALQUER área (TI, saúde, engenharia, trades, finanças, etc.), (4) Recomendações Finais. Retorna em Markdown.
 
 **Prompt 2 — Reescrita CV:**
 > Reescreva em formato ATS canadense (Markdown). Seções: Professional Summary, Work Experience, Education, Skills. Verbos de ação, métricas, keywords NOC + província.
 
-**Prompt 3 — LinkedIn:**
-> Retorne JSON: `{ headline, about, experiences[] }`. SEO otimizado para recrutadores canadenses.
+**Prompt 3 — Perfil LinkedIn Completo:**
+> Retorne JSON: `{ headline, about, experiences[], education[], skills[], certifications[], languages[] }`. SEO otimizado para recrutadores canadenses. **TODAS as informações devem vir EXCLUSIVAMENTE do currículo original.** Certificações, idiomas e skills não mencionados no currículo NÃO devem ser inventados. Se não houver certificações, retornar array vazio.
 
 **Prompt 4 — Vagas:**
 > Sugira 5 vagas reais no Canadá. Retorne JSON: `[{ title, company, location, matchPercentage, url, source }]`.
 
-> **Nota:** Todos os prompts retornam JSON. Usar `JSON.parse()` com try/catch.
+> **Nota:** Todos os prompts retornam JSON ou Markdown conforme indicado. Usar `JSON.parse()` com try/catch para os que retornam JSON.
 
 ---
 
@@ -560,7 +605,8 @@ As Edge Functions handle the secure communication with AbacatePay for payment pr
 
 | Função | Endpoint | Propósito |
 |--------|----------|-----------|
-| `create-checkout` | `/functions/v1/create-checkout` | Gera URL de checkout |
+| `generate-analysis` | `/functions/v1/generate-analysis` | Processa análise completa via IA (Gemini/Groq) |
+| `create-checkout` | `/functions/v1/create-checkout` | Gera URL de checkout (AbacatePay) |
 | `abacatepay-webhook` | `/functions/v1/abacatepay-webhook` | Recebe confirmação de pagamento |
 
 ### 15.3 Configuração (Supabase Dashboard)
@@ -594,6 +640,8 @@ As Edge Functions handle the secure communication with AbacatePay for payment pr
 |--------|-----------|
 | `ABACATEPAY_API_KEY` | Chave da API AbacatePay (não exponha!) |
 | `ABACATEPAY_WEBHOOK_SECRET` | Assinatura para validar webhooks |
+| `GEMINI_API_KEY` | Chave da API Google Gemini para análise |
+| `GROQ_API_KEY` | Chave da API Groq (fallback de análise) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave admin do Supabase (não exponha!) |
 
 ### 15.6 Testando Localmente
@@ -617,8 +665,25 @@ npx supabase functions serve create-checkout --verify-jwt
 
 ### 15.8 Troubleshooting
 
-| Problema | Solução |
-|----------|---------|
-| `401 Unauthorized` no webhook | Verifique se o `ABACATEPAY_WEBHOOK_SECRET` está correto |
-| `is_premium` não atualiza | Verifique se a tabela `profiles` existe e se RLS permite updates |
-| Checkout não cria URL | Verifique se `ABACATEPAY_API_KEY` está configurado corretamente |
+| Problema | Causa Provável | Solução |
+|----------|----------------|---------|
+| `401 Invalid JWT` | Deploy sem a flag `--no-verify-jwt` | Refazer o deploy da função com a flag: `npx supabase functions deploy <nome> --no-verify-jwt`. |
+| `401 Unauthorized` (Webhook) | `ABACATEPAY_WEBHOOK_SECRET` incorreto | Verificar o secret no dashboard da AbacatePay e atualizar nos Secrets do Supabase. |
+| Análise travada (ex: em 75%) | Secrets de IA ausentes | Garanta que `GEMINI_API_KEY` e `GROQ_API_KEY` estão configurados no Supabase. |
+| `is_premium` não atualiza | Falha na Service Role ou RLS | Verificar logs da função `abacatepay-webhook` e permissões da tabela `profiles`. |
+| Erro de timeout na análise | Rate limit em único provider | Confirmar que as chamadas estão sendo distribuídas entre Gemini, Cerebras e Groq. |
+
+### 15.9 Checklist de Deploy (Obrigatório)
+
+Sempre que realizar o deploy de uma Edge Function, siga estes passos para evitar erros conhecidos:
+
+1. **Deploy com Bypass de JWT:**
+   ```bash
+   npx supabase functions deploy <NOME_DA_FUNCAO> --no-verify-jwt --project-ref kbtbttdwkdtugrcgzwcn
+   ```
+
+2. **Verificação de Secrets:**
+   ```bash
+   npx supabase secrets list --project-ref kbtbttdwkdtugrcgzwcn
+   ```
+   *Certifique-se de que ABACATEPAY_API_KEY, ABACATEPAY_WEBHOOK_SECRET, GEMINI_API_KEY, GROQ_API_KEY e SUPABASE_SERVICE_ROLE_KEY estão lá.*

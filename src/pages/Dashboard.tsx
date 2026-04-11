@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/useAuth"
-import { Sparkles, Loader2, FileCheck, PartyPopper, CheckCircle, FileText, Zap, Briefcase } from "lucide-react"
+import { Sparkles, Loader2, FileCheck, PartyPopper, CheckCircle, FileText, Zap, Briefcase, Linkedin } from "lucide-react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { TabResume } from "@/components/dashboard/TabResume"
 import { TabReview } from "@/components/dashboard/TabReview"
+import { TabLinkedIn } from "@/components/dashboard/TabLinkedIn"
+import type { LinkedInProfile } from "@/components/dashboard/TabLinkedIn"
 import { TabJobs } from "@/components/dashboard/TabJobs"
 import type { JobRecommendation } from "@/components/dashboard/TabJobs"
 
@@ -18,6 +20,7 @@ interface AnalysisData {
   critical_flaws: Record<string, unknown>[]
   generated_resume: string
   ats_review?: string
+  generated_linkedin?: LinkedInProfile | null
   suggested_jobs: JobRecommendation[]
 }
 
@@ -229,32 +232,41 @@ export function Dashboard() {
           <p className="text-muted-foreground mt-2 text-lg">Aqui está o resultado da análise detalhada da nossa Inteligência Artificial.</p>
         </div>
 
-        <Tabs defaultValue="optimized" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-1.5 border-2 border-primary/20 shadow-lg shadow-primary/5">
-            <TabsTrigger value="optimized" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Currículo Otimizado</span>
-              <span className="sm:hidden">Otimizado</span>
-            </TabsTrigger>
-            <TabsTrigger value="review" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
+        <Tabs defaultValue="review" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 h-auto bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-1.5 border-2 border-primary/20 shadow-lg shadow-primary/5">
+            <TabsTrigger value="review" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">
               <Zap className="w-4 h-4" />
               <span className="hidden sm:inline">Raio-X (Original)</span>
-              <span className="sm:hidden">Raio-X</span>
+              <span className="sm:hidden text-[11px]">Raio-X</span>
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-2 transition-all duration-200 flex items-center justify-center gap-2">
+            <TabsTrigger value="optimized" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Currículo Otimizado</span>
+              <span className="sm:hidden text-[11px]">Currículo</span>
+            </TabsTrigger>
+            <TabsTrigger value="linkedin" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">
+              <Linkedin className="w-4 h-4" />
+              <span className="hidden sm:inline">Perfil LinkedIn</span>
+              <span className="sm:hidden text-[11px]">LinkedIn</span>
+            </TabsTrigger>
+            <TabsTrigger value="jobs" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">
               <Briefcase className="w-4 h-4" />
               <span className="hidden sm:inline">Vagas e Oportunidades</span>
-              <span className="sm:hidden">Vagas</span>
+              <span className="sm:hidden text-[11px]">Vagas</span>
             </TabsTrigger>
           </TabsList>
 
           <div className="mt-8 border-2 border-primary/20 rounded-2xl bg-gradient-to-br from-card to-card/50 shadow-xl shadow-primary/10 p-6 sm:p-8 min-h-[500px]">
+            <TabsContent value="review" className="mt-0">
+              <TabReview content={data?.ats_review || ""} />
+            </TabsContent>
+
             <TabsContent value="optimized" className="mt-0">
               <TabResume content={data?.generated_resume || ""} />
             </TabsContent>
 
-            <TabsContent value="review" className="mt-0">
-              <TabReview content={data?.ats_review || ""} />
+            <TabsContent value="linkedin" className="mt-0">
+              <TabLinkedIn profile={data?.generated_linkedin} />
             </TabsContent>
 
             <TabsContent value="jobs" className="mt-0">

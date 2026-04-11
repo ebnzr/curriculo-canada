@@ -1,73 +1,181 @@
-# React + TypeScript + Vite
+# CanadaPath AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Otimizador de currículos para o mercado canadense, impulsionado por Inteligência Artificial.
 
-Currently, two official plugins are available:
+## 🚀 Sobre o Projeto
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+CanadaPath AI ajuda profissionais brasileiros a adaptarem seus currículos para o padrão canadense, aumentando as chances de contratação através de:
 
-## React Compiler
+- **Análise ATS completa**: Identifica problemas que fazem currículos serem rejeitados por sistemas automatizados
+- **Currículo otimizado gerado por IA**: Formato canadense profissional em PDF e DOCX
+- **Vagas compatíveis**: Recomendações de vagas reais no Canadá baseadas no seu perfil
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Tecnologias
 
-## Expanding the ESLint configuration
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL + Edge Functions)
+- **Autenticação**: Supabase Auth com Google OAuth
+- **Pagamentos**: AbacatePay
+- **IA**: Groq (Llama) + Google Gemini
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📋 Pré-requisitos
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- Conta no Supabase
+- Conta no Groq (para API de IA)
+- Conta no Google Cloud (para OAuth)
+- Conta na AbacatePay (para pagamentos)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 🚀 Começando
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/seu-usuario/curriculo-canada.git
+cd curriculo-canada
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Instale as dependências
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+# Supabase
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-anon-key
+
+# URL da aplicação
+VITE_APP_URL=http://localhost:5173
+
+# Chaves de API (opcional para desenvolvimento)
+VITE_GROQ_API_KEY=sua-chave-groq
+VITE_GEMINI_API_KEY=sua-chave-gemini
+```
+
+### 4. Inicie o servidor de desenvolvimento
+
+```bash
+npm run dev
+```
+
+## 🏗️ Deploy
+
+Veja o guia completo em [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+### Deploy rápido da Edge Function
+
+```bash
+npx supabase functions deploy generate-analysis --no-verify-jwt
+```
+
+⚠️ **IMPORTANTE**: Sempre use `--no-verify-jwt` para autenticação OAuth funcionar corretamente.
+
+## 🐛 Troubleshooting
+
+### Erro 401 - "Invalid JWT"
+
+**Problema**: Autenticação falhando ao gerar currículo.
+
+**Solução**:
+```bash
+npx supabase functions deploy generate-analysis --no-verify-jwt
+```
+
+**Documentação completa**: [docs/ERRO_401_JWT_RESOLVIDO.md](./docs/ERRO_401_JWT_RESOLVIDO.md)
+
+### Erro CORS
+
+**Problema**: Requisições bloqueadas por política de CORS.
+
+**Solução**: Verifique se o header `Access-Control-Allow-Origin` na Edge Function corresponde à URL do frontend.
+
+### Erro "Failed to fetch"
+
+**Problema**: Edge Function não está respondendo.
+
+**Solução**: Verifique os logs:
+```bash
+npx supabase functions logs generate-analysis --tail
+```
+
+## 📚 Documentação
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Guia completo de deploy
+- [docs/ERRO_401_JWT_RESOLVIDO.md](./docs/ERRO_401_JWT_RESOLVIDO.md) - Documentação técnica do erro 401
+- [SPEC.md](./SPEC.md) - Especificação técnica do projeto
+- [PRD.md](./PRD.md) - Documento de requisitos do produto
+
+## 🏛️ Arquitetura
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Frontend  │────▶│   Supabase   │────▶│   Google    │
+│  (React)    │     │    Auth      │     │   OAuth     │
+└─────────────┘     └──────────────┘     └─────────────┘
+       │
+       │ 2. Chamar Edge Function
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│              Supabase Edge Function                      │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │  generate-analysis                                │  │
+│  │  - Recebe currículo do usuário                    │  │
+│  │  - Verifica autenticação                          │  │
+│  │  - Chama APIs de IA (Groq/Gemini)                 │  │
+│  │  - Gera análise ATS + currículo otimizado         │  │
+│  │  - Busca vagas compatíveis                        │  │
+│  │  - Salva no banco de dados                        │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│              Integrações Externas                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │    Groq     │  │   Gemini    │  │   AbacatePay    │ │
+│  │   (IA)      │  │    (IA)     │  │   (Pagamentos)  │ │
+│  └─────────────┘  └─────────────┘  └─────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 🔒 Autenticação
+
+O projeto usa **Supabase Auth** com **Google OAuth**:
+
+1. Usuário faz login com Google
+2. Supabase cria sessão com JWT
+3. Frontend envia token para Edge Function no body da requisição
+4. Edge Function verifica token manualmente
+5. Acesso concedido às funcionalidades premium
+
+**Nota técnica**: A verificação JWT no Gateway do Supabase está desabilitada (`--no-verify-jwt`) para permitir tokens OAuth. A verificação é feita manualmente na Edge Function.
+
+## 💳 Pagamentos
+
+Integração com **AbacatePay** para pagamentos brasileiros:
+
+- Pagamento único (não é assinatura)
+- Emissão de nota fiscal
+- Webhook para ativação automática do premium
+
+## 📝 Licença
+
+Este projeto é privado e de propriedade da CanadaPath AI.
+
+## 🤝 Suporte
+
+Para dúvidas ou problemas:
+
+1. Consulte a documentação em `/docs`
+2. Verifique os logs da Edge Function
+3. Abra uma issue no repositório
+
+---
+
+Desenvolvido com ❤️ para ajudar brasileiros a conquistarem oportunidades no Canadá.

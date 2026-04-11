@@ -1,11 +1,19 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { FileText, Loader2, Download, FileCheck, AlertCircle } from "lucide-react"
+import { FileText, Loader2, Download, FileCheck, AlertCircle, Eye, X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { parseResumeMarkdown, type StructuredResume } from "@/lib/resumeTypes"
-import { downloadPdf } from "@/lib/resumePdf"
+import { generatePdfBlob, downloadPdf } from "@/lib/resumePdf"
 import { downloadDocx } from "@/lib/resumeDocx"
+import { QualityAlert } from "@/components/resume/QualityAlert"
+import type { LayoutValidationResult } from "@/lib/resumeLayoutValidator"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface ResumeDisplayProps {
   content: string
@@ -15,6 +23,13 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
   const [downloading, setDownloading] = useState<"pdf" | "word" | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [parsedResume, setParsedResume] = useState<StructuredResume | null>(null)
+  const [showQualityAlert, setShowQualityAlert] = useState(false)
+  const [validationResult, setValidationResult] = useState<LayoutValidationResult | null>(null)
+  const [pendingPdfGeneration, setPendingPdfGeneration] = useState(false)
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const resumeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -29,13 +44,79 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
     }
   }, [content])
 
+  // Limpar URL de preview quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl)
+      }
+    }
+  }, [pdfPreviewUrl])
+
+  const handlePreviewPdf = async () => {
+    if (!parsedResume) {
+      setDownloadError("Não foi possível gerar preview. Currículo não estruturado.")
+      return
+    }
+    
+    setIsGeneratingPreview(true)
+    setDownloadError(null)
+    
+    try {
+      // Limpar URL anterior se existir
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl)
+      }
+      
+      // Gerar PDF com validação
+      const result = await generatePdfBlob(parsedResume)
+      
+      if (result.blob) {
+        const url = URL.createObjectURL(result.blob)
+        setPdfPreviewUrl(url)
+        setPdfBlob(result.blob)
+        setValidationResult(result.validationResult)
+        setShowPreview(true)
+        
+        // Se houver problemas, mostrar alerta também
+        if (result.hasIssues || result.validationResult.issues.length > 0) {
+          setShowQualityAlert(true)
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao gerar preview:", err)
+      setDownloadError("Erro ao gerar preview do PDF. Tente novamente.")
+    } finally {
+      setIsGeneratingPreview(false)
+    }
+  }
+
+  const handleClosePreview = () => {
+    setShowPreview(false)
+  }
+
   const handleDownloadPdf = async () => {
     setDownloading("pdf")
     setDownloadError(null)
     try {
       if (parsedResume) {
-        await downloadPdf(parsedResume, "Canadian_Resume.pdf")
+        // Gerar PDF com validação
+        const result = await generatePdfBlob(parsedResume)
+        
+        if (result.hasIssues || result.validationResult.issues.length > 0) {
+          // Mostrar alerta de qualidade antes de prosseguir
+          setValidationResult(result.validationResult)
+          setShowQualityAlert(true)
+          setPendingPdfGeneration(true)
+          setPdfBlob(result.blob || null)
+          setDownloading(null)
+          return
+        }
+        
+        // Baixar diretamente se não houver problemas
+        await downloadPdf(parsedResume, "Canadian_Resume.pdf", true)
       } else {
+        // Fallback para html2pdf
         if (!resumeRef.current) throw new Error("Resume element not found")
         const html2pdf = (await import("html2pdf.js")).default
         const opt = {
@@ -52,6 +133,53 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
       setDownloadError("Erro ao gerar PDF. Tente o formato Word.")
     } finally {
       setDownloading(null)
+    }
+  }
+
+  const handleConfirmPdfGeneration = async () => {
+    if (!pdfBlob) {
+      // Se não temos blob armazenado, precisamos regenerar
+      if (!parsedResume) return
+      try {
+        const result = await generatePdfBlob(parsedResume, true)
+        if (result.blob) {
+          const url = URL.createObjectURL(result.blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = "Canadian_Resume.pdf"
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        }
+        setShowQualityAlert(false)
+        setPendingPdfGeneration(false)
+        setPdfBlob(null)
+      } catch (err) {
+        console.error("Erro ao gerar PDF:", err)
+        setDownloadError("Erro ao gerar PDF. Tente o formato Word.")
+        setPendingPdfGeneration(false)
+      }
+      return
+    }
+    
+    // Usar blob já gerado
+    try {
+      const url = URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = "Canadian_Resume.pdf"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      setShowQualityAlert(false)
+      setPendingPdfGeneration(false)
+      setPdfBlob(null)
+    } catch (err) {
+      console.error("Erro ao baixar PDF:", err)
+      setDownloadError("Erro ao baixar PDF. Tente novamente.")
+      setPendingPdfGeneration(false)
     }
   }
 
@@ -83,6 +211,20 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
 
   return (
     <div className="space-y-6">
+      {/* Quality Alert Dialog */}
+      {validationResult && (
+        <QualityAlert
+          isOpen={showQualityAlert}
+          onClose={() => {
+            setShowQualityAlert(false)
+            setPendingPdfGeneration(false)
+          }}
+          validationResult={validationResult}
+          onGeneratePdf={handleConfirmPdfGeneration}
+          onDownloadDocx={handleDownloadWord}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Seu Currículo Otimizado</h2>
@@ -92,8 +234,22 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
+            onClick={handlePreviewPdf}
+            disabled={isGeneratingPreview || !parsedResume}
+            aria-label="Visualizar currículo em PDF"
+          >
+            {isGeneratingPreview ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+            ) : (
+              <Eye className="h-4 w-4 mr-2" aria-hidden="true" />
+            )}
+            Visualizar PDF
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={handleDownloadPdf}
-            disabled={!!downloading}
+            disabled={!!downloading || pendingPdfGeneration}
             aria-label="Baixar currículo em PDF"
           >
             {downloading === "pdf" ? (
@@ -155,6 +311,62 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
       </div>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-5xl max-h-[95vh] p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle>Preview do Currículo PDF</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClosePreview}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {validationResult && validationResult.issues.length > 0 && (
+              <p className="text-sm text-amber-600 mt-2">
+                ⚠️ Detectados {validationResult.issues.filter(i => i.severity === 'CRITICAL').length} problemas de layout. 
+                <button 
+                  onClick={() => setShowQualityAlert(true)}
+                  className="underline hover:text-amber-700"
+                >
+                  Ver detalhes
+                </button>
+              </p>
+            )}
+          </DialogHeader>
+          <div className="flex-1 bg-gray-100 p-4 overflow-auto" style={{ height: '70vh' }}>
+            {pdfPreviewUrl ? (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full border-0 bg-white shadow-lg"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Erro ao carregar preview</p>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t flex justify-end gap-2">
+            <Button variant="outline" onClick={handleClosePreview}>
+              Fechar
+            </Button>
+            <Button onClick={handleDownloadPdf} disabled={!!downloading}>
+              {downloading === "pdf" ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Baixar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="text-center text-xs text-muted-foreground">
         <p>Currículo otimizado para o mercado canadense • Formatos PDF e Word disponíveis</p>

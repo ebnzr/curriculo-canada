@@ -5,12 +5,14 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY")
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")
+const CEREBRAS_API_KEY = Deno.env.get("CEREBRAS_API_KEY")
 
 const DAILY_ANALYSIS_LIMIT = 5
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") || "https://canadapath.ai",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey",
+  "Access-Control-Allow-Origin": "*",  // Permitir todas as origens em desenvolvimento
+  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
 interface GenerateRequest {
@@ -36,14 +38,70 @@ function cleanResumeText(text: string): string {
 function buildPrompts(cleanedText: string, noc: string, province: string, city?: string) {
   const locationHeader = city ? city : `${province}, Canada`
   
-  const atsPrompt = `Você é um Analista de RH e Recrutador Especialista pelo mercado do Canadá. 
+  const atsPrompt = `Você é um Analista de RH e Consultor de Carreira Especialista no mercado canadense, com profundo conhecimento sobre requisitos de certificação e credenciamento profissional em TODAS as áreas de atuação no Canadá.
 
 O candidato almeja vagas para o [NOC: ${noc}] na província de [${province}], Canadá. O currículo original dele é:
 """
 ${cleanedText}
 """
 
-Gere uma avaliação de ATS forte. Analise verbos de ação, uso de métricas (quantificação) e o formato do Canadá (sem fotos, dados pessoais extras). Devolva em formato puro de Markdown. Comece indo direto ao ponto sobre o que não funciona.`
+Gere uma avaliação completa e estruturada em Markdown puro com as seguintes seções:
+
+## 🔍 Diagnóstico Rápido
+Comece direto ao ponto: liste os 3-5 problemas mais críticos que fariam este currículo ser REJEITADO por um ATS canadense.
+
+## 📊 Análise Detalhada
+
+### Formatação & Estrutura
+Avalie: formato canadense (sem foto, sem dados pessoais como idade/estado civil/CPF), seções obrigatórias (Professional Summary, Work Experience, Education, Skills), uso correto de headers e bullet points.
+
+### Verbos de Ação & Linguagem
+Avalie: uso de action verbs fortes (Led, Delivered, Implemented, Optimized), voz ativa, linguagem profissional em inglês.
+
+### Métricas & Quantificação
+Avalie: presença de números, percentuais, valores financeiros, tamanho de equipes — dados concretos que provam impacto.
+
+### Keywords & Compatibilidade NOC
+Avalie: presença de palavras-chave relevantes para o NOC ${noc}, termos que ATS canadenses buscam para esta categoria.
+
+## 🎓 Certificações e Credenciais Recomendadas
+
+Esta seção é FUNDAMENTAL. Analise a área de atuação do candidato (baseado no NOC ${noc}) e recomende certificações, licenças profissionais ou cursos que são:
+1. **Valorizados ou exigidos** por empregadores canadenses nesta área
+2. **Reconhecidos** na província de ${province}
+3. **Acessíveis** para profissionais internacionais
+
+Considere TODAS as áreas — não apenas TI. Exemplos por área:
+- **TI/Tecnologia:** AWS/Azure/GCP certifications, CompTIA, CISSP, PMP, Scrum/Agile
+- **Saúde:** NCLEX-RN (enfermagem), LMCC/NAC (medicina), PEBC (farmácia), certificação provincial específica
+- **Engenharia:** P.Eng licensing, Iron Ring, FE exam
+- **Trades/Ofícios:** Red Seal certification, Provincial Trade Certificate
+- **Finanças:** CPA Canada, CFA, CFP
+- **Comunicação/Marketing:** Google Analytics, HubSpot, certificações de marketing digital
+- **Educação:** Teaching certification provincial, TESL/TESOL
+- **Gestão:** PMP, Six Sigma, CHRP (RH)
+- **Alimentação/Hotelaria:** Food Handler certification, Smart Serve/Serving It Right
+- **Qualquer área:** First Aid/CPR, WHMIS, French language (TEF/TCF se relevante para a província)
+
+Para cada certificação recomendada, inclua:
+- **Nome** da certificação
+- **Órgão emissor** 
+- **Por que é importante** para o mercado canadense nesta área
+- **Como obter** (brevemente — online, presencial, tempo estimado)
+
+⚠️ Diferencie claramente entre:
+- Certificações **obrigatórias** (sem elas, não pode exercer a profissão)
+- Certificações **altamente recomendadas** (forte diferencial competitivo)
+- Certificações **nice-to-have** (complementares)
+
+## 💡 Recomendações Finais
+Liste 3-5 ações prioritárias que o candidato deveria tomar IMEDIATAMENTE para melhorar suas chances no mercado canadense.
+
+REGRAS:
+- Devolva em formato puro de Markdown (sem bloco de código, sem backticks)
+- Use emojis nos headers para facilitar a leitura
+- Seja direto e construtivo — aponte problemas MAS sempre com solução
+- Todas as recomendações devem ser específicas para o NOC ${noc} e a província ${province}`
 
   const optimizedCvPrompt = `You are a Canadian Career Specialist. Transform the following Brazilian resume into a professional Canadian-format resume.
 
@@ -105,7 +163,63 @@ Retorne EXATAMENTE UM JSON ARRAY puro, sem aspas invertidas de markdown, contend
 
 IMPORTANTE: matchPercentage deve ser um número inteiro (sem o símbolo %), entre 60 e 98.`
 
-  return { atsPrompt, optimizedCvPrompt, jobsPrompt }
+  const linkedinPrompt = `You are a LinkedIn Profile Optimization Expert specialized in the Canadian job market.
+
+Based EXCLUSIVELY on the resume below, create an optimized LinkedIn profile for the Canadian market.
+
+The candidate targets NOC ${noc} positions in ${province}, Canada.
+
+Resume:
+${cleanedText}
+
+Return EXACTLY a pure JSON object (no markdown backticks) with the following sections:
+
+{
+  "headline": "A compelling headline (max 220 chars) based on the candidate's ACTUAL job titles and skills from the resume. Format: Actual Role Title | Key Skill from Resume | Value Proposition",
+  "about": "A powerful About section (1500-2000 chars). Start with a hook. Include ONLY: actual years of experience from the resume, real achievements mentioned in the resume, actual core competencies listed. Use line breaks for readability. Write in first person.",
+  "experiences": [
+    {
+      "role": "Exact Job Title from Resume",
+      "company": "Exact Company Name from Resume",
+      "location": "City, Country as stated in Resume",
+      "period": "MMM YYYY - MMM YYYY as stated in Resume",
+      "description": "2-3 sentences about the role based on resume content.",
+      "bullets": ["Achievement with metrics taken from the resume, enhanced with action verbs"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Exact Degree from Resume",
+      "institution": "Exact University from Resume",
+      "year": "YYYY from Resume",
+      "description": "Relevant details from the resume"
+    }
+  ],
+  "skills": ["Only skills explicitly mentioned or clearly demonstrated in the resume"],
+  "certifications": [
+    {
+      "name": "Only certifications explicitly listed in the resume",
+      "issuer": "Issuing Organization from the resume",
+      "year": "YYYY from the resume"
+    }
+  ],
+  "languages": [
+    { "language": "Only languages mentioned in the resume", "proficiency": "Proficiency level from the resume" }
+  ]
+}
+
+STRICT RULES:
+1. ALL text MUST be in English, optimized for Canadian recruiters
+2. Use strong ACTION VERBS and METRICS in experience bullets
+3. Include keywords relevant to NOC ${noc} where they naturally fit the candidate's REAL background
+4. Skills MUST come ONLY from the resume — list only skills the candidate actually has
+5. Certifications MUST come ONLY from the resume — if the resume has NO certifications, return an EMPTY array: "certifications": []
+6. Languages MUST come ONLY from the resume — do NOT assume or invent languages. If not mentioned, include only Portuguese (Native). Do NOT add French or any other language unless explicitly stated in the resume
+7. Do NOT invent, fabricate, or assume ANY information not present in the resume. Every fact must be traceable to the original text
+8. The headline must reflect the candidate's ACTUAL role and skills, not generic NOC descriptions
+9. Output ONLY valid JSON - no markdown, no backticks, no extra text`
+
+  return { atsPrompt, optimizedCvPrompt, jobsPrompt, linkedinPrompt }
 }
 
 function delay(ms: number): Promise<void> {
@@ -121,8 +235,50 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   ])
 }
 
+async function callCerebras(prompt: string, modelIndex = 0): Promise<string> {
+  const models = ["llama-3.3-70b", "llama-3.1-70b", "llama-3.1-8b"]
+  const model = models[modelIndex]
+
+  for (let attempt = 0; attempt <= 3; attempt++) {
+    const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${CEREBRAS_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    })
+
+    if (!response.ok) {
+      const err = await response.json()
+      const status = response.status
+      // Rate limit ou erro de servidor = retry
+      if ((status === 429 || status === 503 || status === 500) && attempt < 3) {
+        await delay(Math.pow(2, attempt) * 1000)
+        continue
+      }
+      // Tentar próximo modelo se disponível
+      if (attempt >= 3 && modelIndex < models.length - 1) {
+        return callCerebras(prompt, modelIndex + 1)
+      }
+      throw new Error(`Cerebras error ${status}: ${err?.error?.message}`)
+    }
+
+    const data = await response.json()
+    const text = data?.choices?.[0]?.message?.content
+    if (!text) throw new Error("Cerebras returned empty response")
+    return text
+  }
+  throw new Error("Cerebras: max retries exceeded")
+}
+
 async function callGroq(prompt: string, modelIndex = 0): Promise<string> {
-  const models = ["llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"]
+  const models = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"]
   const model = models[modelIndex]
 
   for (let attempt = 0; attempt <= 3; attempt++) {
@@ -197,32 +353,104 @@ async function callGemini(prompt: string, modelIndex = 0): Promise<string> {
 async function callAI(prompt: string): Promise<string> {
   const errors: string[] = []
   
-  if (GROQ_API_KEY) {
+  // 1. Tentar Cerebras primeiro (novo)
+  if (CEREBRAS_API_KEY) {
     try {
-      console.log("Attempting Groq API...")
-      return await callGroq(prompt)
-    } catch (groqErr) {
-      const errMsg = groqErr instanceof Error ? groqErr.message : String(groqErr)
-      console.error("Groq failed, trying Gemini:", errMsg)
-      errors.push(`Groq: ${errMsg}`)
+      console.log("Attempting Cerebras API...")
+      return await callCerebras(prompt)
+    } catch (cerebrasErr) {
+      const errMsg = cerebrasErr instanceof Error ? cerebrasErr.message : String(cerebrasErr)
+      console.error("Cerebras failed, trying Gemini:", errMsg)
+      errors.push(`Cerebras: ${errMsg}`)
     }
   }
   
+  // 2. Gemini como fallback
   if (GEMINI_API_KEY) {
     try {
       console.log("Attempting Gemini API...")
       return await callGemini(prompt)
     } catch (geminiErr) {
       const errMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
-      console.error("Gemini also failed:", errMsg)
+      console.error("Gemini failed, trying Groq:", errMsg)
       errors.push(`Gemini: ${errMsg}`)
+    }
+  }
+  
+  // 3. Groq como último recurso
+  if (GROQ_API_KEY) {
+    try {
+      console.log("Attempting Groq API...")
+      return await callGroq(prompt)
+    } catch (groqErr) {
+      const errMsg = groqErr instanceof Error ? groqErr.message : String(groqErr)
+      console.error("Groq also failed:", errMsg)
+      errors.push(`Groq: ${errMsg}`)
     }
   }
   
   throw new Error(`All AI providers failed: ${errors.join(" | ")}`)
 }
 
+// Distribuir chamadas entre providers para evitar rate limit
+// Gemini-first para prompts longos, Groq-first para prompts curtos
+async function callAI_GeminiFirst(prompt: string): Promise<string> {
+  const errors: string[] = []
+  
+  if (GEMINI_API_KEY) {
+    try {
+      return await callGemini(prompt)
+    } catch (e) {
+      errors.push(`Gemini: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (CEREBRAS_API_KEY) {
+    try {
+      return await callCerebras(prompt)
+    } catch (e) {
+      errors.push(`Cerebras: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (GROQ_API_KEY) {
+    try {
+      return await callGroq(prompt)
+    } catch (e) {
+      errors.push(`Groq: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  throw new Error(`All providers failed (Gemini-first): ${errors.join(" | ")}`)
+}
+
+async function callAI_GroqFirst(prompt: string): Promise<string> {
+  const errors: string[] = []
+  
+  if (GROQ_API_KEY) {
+    try {
+      return await callGroq(prompt)
+    } catch (e) {
+      errors.push(`Groq: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (CEREBRAS_API_KEY) {
+    try {
+      return await callCerebras(prompt)
+    } catch (e) {
+      errors.push(`Cerebras: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  if (GEMINI_API_KEY) {
+    try {
+      return await callGemini(prompt)
+    } catch (e) {
+      errors.push(`Gemini: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+  throw new Error(`All providers failed (Groq-first): ${errors.join(" | ")}`)
+}
+
 serve(async (req: Request) => {
+  console.log(`[${Date.now()}] Request received: ${req.method}`)
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders })
   }
@@ -234,29 +462,71 @@ serve(async (req: Request) => {
     })
   }
 
+  // Ler o body primeiro para pegar o token (bypassando validação do gateway)
+  let body: GenerateRequest & { accessToken?: string }
+  try {
+    body = await req.json()
+    console.log(`[${Date.now()}] Body received, has accessToken:`, !!body.accessToken)
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    })
+  }
+
+  // Pegar token do body ou do header Authorization
   const authHeader = req.headers.get("Authorization")
-  if (!authHeader?.startsWith("Bearer ")) {
+  const tokenFromHeader = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : null
+  const token = body.accessToken || tokenFromHeader
+  
+  // Tentar pegar user_id do header do gateway (quando auth é válida)
+  const userIdFromGateway = req.headers.get("x-supabase-user-id")
+  
+  console.log(`[${Date.now()}] Token source:`, body.accessToken ? "body" : (tokenFromHeader ? "header" : "none"))
+  console.log(`[${Date.now()}] User from gateway:`, userIdFromGateway)
+  
+  if (!token && !userIdFromGateway) {
     return new Response(JSON.stringify({ error: "Missing authorization token" }), {
       status: 401,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     })
   }
 
-  const token = authHeader.replace("Bearer ", "")
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    })
+  let userId: string | null = userIdFromGateway
+  let userEmail: string | null = null
+
+  // Se não temos userId do gateway, verificar o token manualmente
+  if (!userId && token) {
+    console.log(`[${Date.now()}] Verifying token manually...`)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError) {
+      console.log(`[${Date.now()}] Auth error:`, authError.message)
+    }
+    
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Invalid or expired token", debug: authError?.message }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      })
+    }
+    
+    userId = user.id
+    userEmail = user.email || null
+    console.log(`[${Date.now()}] User authenticated via token:`, userId)
+  } else if (userId) {
+    console.log(`[${Date.now()}] User authenticated via gateway:`, userId)
+    // Buscar email do perfil ou usar um padrão para dev mode
+    const { data: userData } = await supabase.auth.admin.getUserById(userId)
+    userEmail = userData?.user?.email || null
   }
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("is_premium")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single()
 
   if (profileError || !profile) {
@@ -266,38 +536,11 @@ serve(async (req: Request) => {
     })
   }
 
-  const isDevMode = req.headers.get("x-dev-mode") === "true" || user.email?.includes("@localhost")
+  const isDevMode = req.headers.get("x-dev-mode") === "true" || userEmail?.includes("@localhost")
   
   if (!profile.is_premium && !isDevMode) {
     return new Response(JSON.stringify({ error: "Premium subscription required" }), {
       status: 403,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    })
-  }
-
-  const { count, error: countError } = await supabase
-    .from("analyses")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-  if (countError) {
-    console.error("Rate limit check failed:", countError)
-  } else if ((count ?? 0) >= DAILY_ANALYSIS_LIMIT) {
-    return new Response(
-      JSON.stringify({
-        error: `Limite diário atingido. Você pode realizar ${DAILY_ANALYSIS_LIMIT} análises por dia. Tente novamente amanhã.`,
-      }),
-      { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    )
-  }
-
-  let body: GenerateRequest
-  try {
-    body = await req.json()
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     })
   }
@@ -328,14 +571,20 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { atsPrompt, optimizedCvPrompt, jobsPrompt } = buildPrompts(cleanedText, noc, province, city)
+    const { atsPrompt, optimizedCvPrompt, jobsPrompt, linkedinPrompt } = buildPrompts(cleanedText, noc, province, city)
 
-    console.log("Starting AI analysis for user:", user.id)
+    console.log("Starting AI analysis for user:", userId)
+    console.log("Available providers - Cerebras:", !!CEREBRAS_API_KEY, "Gemini:", !!GEMINI_API_KEY, "Groq:", !!GROQ_API_KEY)
     
-    const [atsText, cvText, jobsTextRaw] = await Promise.all([
-      withTimeout(callAI(atsPrompt), 120000),
-      withTimeout(callAI(optimizedCvPrompt), 120000),
-      withTimeout(callAI(jobsPrompt), 120000),
+    const startTime = Date.now()
+    
+    // Distribuir entre providers para evitar rate limit
+    // ATS → Gemini-first, CV → default (Cerebras→Gemini→Groq), Jobs → Groq-first, LinkedIn → Gemini-first
+    const [atsText, cvText, jobsTextRaw, linkedinTextRaw] = await Promise.all([
+      withTimeout(callAI_GeminiFirst(atsPrompt), 120000).then(r => { console.log(`ATS done in ${Date.now() - startTime}ms`); return r }),
+      withTimeout(callAI(optimizedCvPrompt), 120000).then(r => { console.log(`CV done in ${Date.now() - startTime}ms`); return r }),
+      withTimeout(callAI_GroqFirst(jobsPrompt), 120000).then(r => { console.log(`Jobs done in ${Date.now() - startTime}ms`); return r }),
+      withTimeout(callAI_GeminiFirst(linkedinPrompt), 120000).then(r => { console.log(`LinkedIn done in ${Date.now() - startTime}ms`); return r }),
     ])
     
     console.log("AI analysis completed successfully")
@@ -363,15 +612,33 @@ serve(async (req: Request) => {
       jobs = []
     }
 
-    console.log("Saving analysis to database for user:", user.id)
+    // Parse LinkedIn JSON
+    let linkedinProfile: Record<string, unknown> | null = null
+    try {
+      let cleanLinkedinJson = linkedinTextRaw.trim()
+      if (cleanLinkedinJson.startsWith("```json")) {
+        cleanLinkedinJson = cleanLinkedinJson.replace(/```json/g, "").replace(/```/g, "").trim()
+      }
+      if (cleanLinkedinJson.startsWith("```")) {
+        cleanLinkedinJson = cleanLinkedinJson.replace(/```/g, "").trim()
+      }
+      linkedinProfile = JSON.parse(cleanLinkedinJson)
+      console.log("LinkedIn profile parsed successfully")
+    } catch {
+      console.error("Failed to parse LinkedIn JSON:", linkedinTextRaw)
+      linkedinProfile = null
+    }
+
+    console.log("Saving analysis to database for user:", userId)
     const { error: insertError } = await supabase.from("analyses").insert({
-      user_id: user.id,
+      user_id: userId,
       original_text: cleanedText,
       ats_score: 65,
       critical_flaws: [],
       generated_resume: cvText,
       ats_review: atsText,
       suggested_jobs: jobs,
+      generated_linkedin: linkedinProfile,
     })
 
     if (insertError) {
@@ -382,12 +649,13 @@ serve(async (req: Request) => {
       })
     }
 
-    console.log("Analysis completed and saved successfully for user:", user.id)
+    console.log("Analysis completed and saved successfully for user:", userId)
     return new Response(
       JSON.stringify({
         atsReview: atsText,
         optimizedCv: cvText,
         jobRecommendations: jobs,
+        linkedinProfile,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     )

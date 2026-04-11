@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react"
 import { useWizardStore } from "@/stores/wizardStore"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabase"
 import { useNavigate } from "react-router-dom"
 import { Loader2, Sparkles } from "lucide-react"
 import { generateAllContent } from "@/lib/aiProvider"
@@ -49,43 +48,43 @@ export function StepAnalysis() {
         "Verificando formatação contra padrões do " + (province || "Canadá") + "...",
         "Gerando currículo otimizado...",
         "Buscando vagas compatíveis...",
+        "Processando resultados da IA...",
+        "Compilando recomendações...",
+        "Quase pronto...",
+        "Finalizando análise...",
       ]
 
       let msgIndex = 0
       const interval = setInterval(() => {
         msgIndex++
         if (msgIndex < messages.length) {
-          setProgress(Math.min(msgIndex * 15, 90))
+          setProgress(Math.min(msgIndex * 10, 95))
           setStatusMessage(messages[msgIndex])
         }
-      }, 2000)
+      }, 3000)
+
+      // Timeout global de 120 segundos
+      const globalTimeout = setTimeout(() => {
+        clearInterval(interval)
+        setError("A análise demorou mais do que o esperado. Tente novamente.")
+        setLoading(false)
+      }, 120000)
 
       try {
         setStatusMessage("Conectando aos servidores da IA...")
 
-        const result = await generateAllContent(
+        await generateAllContent(
           cleanedText,
           noc || "General",
           province || "Canada",
           city || undefined
         )
 
-        const { error: dbError } = await supabase.from('analyses').upsert({
-          user_id: user.id,
-          original_text: cleanedText,
-          ats_score: 65,
-          critical_flaws: [],
-          generated_resume: result.optimizedCv,
-          ats_review: result.atsReview,
-          suggested_jobs: result.jobRecommendations
-        }, { onConflict: 'user_id' })
-
-        if (dbError) {
-          console.error("Erro ao salvar análise:", dbError)
-          throw new Error("Erro ao salvar análise no banco de dados.")
-        }
+        // A Edge Function já salva a análise no banco de dados.
+        // Não precisamos fazer upsert aqui.
 
         clearInterval(interval)
+        clearTimeout(globalTimeout)
         setProgress(100)
         setStatusMessage("Análise concluída! Redirecionando...")
 
@@ -95,9 +94,11 @@ export function StepAnalysis() {
 
       } catch (err) {
         console.error("Erro na análise:", err)
+        console.error("Erro detalhado:", JSON.stringify(err, Object.getOwnPropertyNames(err)))
         const errorMessage = err instanceof Error ? err.message : "Erro desconhecido"
         setError(errorMessage)
         clearInterval(interval)
+        clearTimeout(globalTimeout)
         setLoading(false)
       }
     }
