@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Navigate } from "react-router-dom";
-import { Sparkles, Shield, Zap, FileCheck, ArrowRight, Linkedin, Target, Scan } from "lucide-react";
+import { Sparkles, Shield, Zap, ArrowRight, Linkedin, Target, Scan } from "lucide-react";
 
 export function Login() {
   const { user, loading, loginWithGoogle } = useAuth();

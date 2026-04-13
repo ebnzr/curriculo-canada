@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Download, CheckCircle, Sparkles, Lightbulb, Star } from 'lucide-react'
+import { FileText, CheckCircle, Sparkles, Lightbulb, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
