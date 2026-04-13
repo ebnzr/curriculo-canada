@@ -32,7 +32,7 @@ export function Header() {
       <div className="container px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center group">
           <img
-            src="/logo.png"
+            src="/logo.png?v=2"
             alt="Currículo Canadá"
             className="h-[60px] w-auto object-contain"
           />
