@@ -12,9 +12,9 @@ const TOTAL_STEPS = 5
 const stepLabels = [
   { step: 1, label: "Onde você quer chegar" },
   { step: 2, label: "Seu Currículo" },
-  { step: 3, label: "Análise ATS" },
+  { step: 3, label: "Análise ATS Grátis" },
   { step: 4, label: "Pagamento" },
-  { step: 5, label: "Serviço Completo" },
+  { step: 5, label: "Currículo e LinkedIn Otimizados" },
 ]
 
 const stepTitles: Record<number, string> = {

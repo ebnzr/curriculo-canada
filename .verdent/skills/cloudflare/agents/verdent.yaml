@@ -1,0 +1,12 @@
+category: DevOps
+interface:
+  display_name: Cloudflare Workers & Pages
+  short_description: Build and deploy on the Cloudflare platform.
+  icon_dark: './assets/icon-dark.png'
+  icon_light: './assets/icon-light.png'
+  default_prompt: Help me build and deploy on Cloudflare.
+  label:
+    - cloudflare
+    - serverless
+    - deployment
+    - edge-computing

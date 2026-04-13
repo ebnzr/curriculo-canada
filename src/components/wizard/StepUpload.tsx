@@ -113,8 +113,6 @@ function computeAtsPreview(text: string): { score: number; issues: AtsIssue[] } 
     score = 35 // Garante status Reprovável Crítico (< 40)
   }
 
-  // Estabelecendo um limite rígido inferior
-  score = Math.max(score, 18) // Mínimo de 18 (para não zerar)
   score = Math.min(score, 100)
 
   // Se tudo passou na regra rígida

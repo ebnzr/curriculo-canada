@@ -15,17 +15,6 @@ export function Hero() {
       <div className="container relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="py-16 lg:py-24">
           
-          {/* Editorial Masthead */}
-          <div className="mb-10 lg:mb-14">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground">
-                CurrículoCanadá • Edição 2025
-              </span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-          </div>
-
           {/* Centered Content */}
           <div className="max-w-3xl mx-auto text-center">
             

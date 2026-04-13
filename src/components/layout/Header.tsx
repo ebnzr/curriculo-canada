@@ -30,14 +30,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-baseline gap-1 group">
-          <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-            Currículo
-          </span>
-          <span className="font-heading font-light text-xl tracking-tight text-primary">
-            Canadá
-          </span>
-          <span className="hidden sm:inline-block w-1.5 h-1.5 bg-primary rounded-full ml-0.5 mb-1" aria-hidden="true" />
+        <Link to="/" className="flex items-center group">
+          <img
+            src="/logo.png"
+            alt="Currículo Canadá"
+            className="h-[60px] w-auto object-contain"
+          />
         </Link>
 
         <div className="flex items-center justify-end gap-2 sm:gap-4">
