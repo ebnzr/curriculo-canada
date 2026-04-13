@@ -5,7 +5,7 @@ const testimonials = [
     name: "Lucas M.",
     role: "Software Engineer",
     location: "Toronto, ON",
-    text: "Eu mandava dezenas de e-mails usando o currículo do Brasil traduzido. O CanadaPath mudou tudo: em 2 semanas recebi 3 callbacks. O formato canadense realmente faz diferença.",
+    text: "Eu mandava dezenas de e-mails usando o currículo do Brasil traduzido. O CurrículoCanadá mudou tudo: em 2 semanas recebi 3 callbacks. O formato canadense realmente faz diferença.",
     rating: 5
   },
   {

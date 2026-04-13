@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     question: "Preciso traduzir meu currículo antes de analisar?",
-    answer: "Não. Se o seu currículo original estiver em inglês ou português, o CanadaPath AI é capaz de compreendê-lo perfeitamente e entregar a versão otimizada exclusivamente baseada nos padrões dos empregadores exigentes da América do Norte."
+    answer: "Não. Se o seu currículo original estiver em inglês ou português, o CurrículoCanadá é capaz de compreendê-lo perfeitamente e entregar a versão otimizada exclusivamente baseada nos padrões dos empregadores exigentes da América do Norte."
   }
 ]
 

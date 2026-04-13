@@ -93,9 +93,21 @@ export function useAuth() {
   });
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
+      // Limpar estado imediatamente
+      setUser(null);
+      setProfile(null);
+    } catch (err) {
+      console.error("Logout failed:", err);
+      // Mesmo com erro, limpar o estado local
+      setUser(null);
+      setProfile(null);
+    }
   };
 
   return { user, profile, loading, loginWithGoogle, logout };

@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export function CTA() {
+  const { user, loading } = useAuth()
+
   return (
     <section className="relative py-20 lg:py-32 bg-primary overflow-hidden">
       <div className="absolute inset-0 opacity-5" aria-hidden="true">
@@ -38,19 +41,34 @@ export function CTA() {
           Transforme seu currículo em uma máquina de conseguir entrevistas.
         </p>
 
-        <Button
-          asChild
-          size="lg"
-          className="h-14 px-10 text-base font-semibold bg-white text-primary hover:bg-white/90 shadow-2xl hover:shadow-white/20 hover:-translate-y-0.5 transition-all duration-300"
-        >
-          <Link to="/login?redirect=/analyze">
-            Faça login para começar
-            <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
-          </Link>
-        </Button>
+        {loading ? (
+          <div className="h-14 w-64 bg-white/20 rounded-xl animate-pulse mx-auto" aria-hidden="true" />
+        ) : user ? (
+          <Button
+            asChild
+            size="lg"
+            className="h-14 px-10 text-base font-semibold bg-white text-primary hover:bg-white/90 shadow-2xl hover:shadow-white/20 hover:-translate-y-0.5 transition-all duration-300"
+          >
+            <Link to="/analyze">
+              Analisar meu Currículo
+              <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            size="lg"
+            className="h-14 px-10 text-base font-semibold bg-white text-primary hover:bg-white/90 shadow-2xl hover:shadow-white/20 hover:-translate-y-0.5 transition-all duration-300"
+          >
+            <Link to="/login?redirect=/analyze">
+              Faça login para começar
+              <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+            </Link>
+          </Button>
+        )}
 
         <p className="text-sm text-white/60 mt-6">
-          Login rápido via Google • Resultados em segundos
+          {user ? "Acesso imediato à plataforma" : "Login rápido via Google • Resultados em segundos"}
         </p>
       </div>
 

@@ -224,9 +224,6 @@ export function Dashboard() {
               <Sparkles className="w-6 h-6 text-primary" aria-hidden="true" />
             </div>
             <p className="text-sm font-bold text-primary tracking-wider uppercase">Acesso Premium Ativo</p>
-            <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
-              Padrão Canadense (Canadá)
-            </div>
           </div>
           <h1 className="text-3xl font-black mt-4">Olá, {profile?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || "viajante"}!</h1>
           <p className="text-muted-foreground mt-2 text-lg">Aqui está o resultado da análise detalhada da nossa Inteligência Artificial.</p>
@@ -236,7 +233,7 @@ export function Dashboard() {
           <TabsList className="grid w-full grid-cols-4 h-auto bg-gradient-to-r from-primary/5 to-primary/10 rounded-2xl p-1.5 border-2 border-primary/20 shadow-lg shadow-primary/5">
             <TabsTrigger value="review" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">
               <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Raio-X (Original)</span>
+              <span className="hidden sm:inline">Raio-X de Carreira</span>
               <span className="sm:hidden text-[11px]">Raio-X</span>
             </TabsTrigger>
             <TabsTrigger value="optimized" className="rounded-xl font-bold data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary data-[state=active]:to-primary/80 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/30 py-3 px-1.5 transition-all duration-200 flex items-center justify-center gap-1.5">

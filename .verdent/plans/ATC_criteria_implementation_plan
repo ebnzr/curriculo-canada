@@ -1,0 +1,44 @@
+# Implementação de Algoritmo Rigoroso de ATS Score
+
+O atual algoritmo no `StepUpload.tsx` é excessivamente tolerante. Um currículo brasileiro padrão deveria receber uma pontuação "Reprovável" (vermelho) devido às diferenças culturais rigorosas de recrutamento no Canadá.
+
+Fizemos uma pesquisa das melhores práticas e critérios de como os sistemas de ATS norte-americanos (e canadenses em particular) pontuam candidatos. 
+
+## Mudanças Propostas no `StepUpload.tsx`
+
+Iremos substituir a função `computeAtsPreview` por uma versão robusta baseada em "Categorias de Penalidade", com hard caps e verificações granulares:
+
+### 1. Fatores Eliminatórios (Deal-breakers no Canadá)
+No Canadá, alguns itens causam rejeição automática por questões de conformidade legal (Anti-discrimination laws) ou por incompatibilidade óbvia:
+- **Idioma:** Currículo predominantemente em português (detectado por palavras como "experiência", "formação", "brasileiro", "ensino médio"). Se não possuir jargões em inglês e tiver muito PT-BR -> *Penalidade: -40 pontos*.
+- **Foto/Imagem:** Referências explícitas a fotos -> *Penalidade: -30 pontos*.
+- **Dados Pessoais Sensíveis:** Idade, data de nascimento, estado civil, CPF, identidade, nacionalidade, gênero -> *Penalidade: -30 pontos*.
+
+*(Nota: Se houver qualquer "Deal-breaker", a pontuação não deve passar de 50).*
+
+### 2. Formato e Estrutura (Essential Format)
+O ATS não consegue analisar se faltarem os cabeçalhos padrão:
+- **E-mail Ausente** -> *Penalidade: -20 pontos*
+- **Telefone Ausente** -> *Penalidade: -10 pontos*
+- **Seção de Experiência Ausente** -> *Penalidade: -15 pontos*
+- **Seção de Educação Ausente** -> *Penalidade: -15 pontos*
+- **Seção de Habilidades Ausente** -> *Penalidade: -10 pontos*
+- **Ausência de LinkedIn** -> *Penalidade: -10 pontos*
+
+### 3. Qualidade do Conteúdo (Impact & Metrics)
+Recrutadores querem ver resultados, não apenas responsabilidades operacionais:
+- **Falta de Métricas:** Ausência de números, porcentagens ou moedas -> *Penalidade: -10 pontos*
+- **Falta de Verbos de Ação Fortes (Action Verbs):** Ausência de palavras que denotem liderança/iniciativa (e.g., managed, led, improved, created) -> *Penalidade: -10 pontos*
+- **Seções Obsoletas:** "Referências disponíveis sob solicitação" ("References available upon request") -> *Penalidade: -5 pontos*
+
+### 4. Motor de Termos (Extensas Expressões Regulares)
+Aprimoramento das Regexes para cobrir muito mais variações (case-insensitive).
+*Exemplo: Dados Pessoais irá varrer por `(cpf|rg|cnh|estado civil|marital status|data de nascimento|date of birth|idade|age|nacionalidade|nationality|casado|solteiro|brasileiro\(a\)|sexo|gender|masculino|feminino|male|female|dob)`*.
+
+## Open Questions
+- Devido à análise ser 100% no cliente (TypeScript/Regex), a detecção de fotos e tabelas fica limitada apenas à identificação de palavras-chave como "foto" ou "imagem" ou dados pessoais explícitos no texto. Esta heurística é suficiente para demonstrar os erros críticos de graça e vender a análise avançada da IA?
+- A nota máxima base começa em 100 e vai caindo para cada erro. Deseja estabelecer um limite mínimo estrito (ex: Score mínimo de 15)?
+
+## Verification Plan
+1. Testar o novo algoritmo colando um currículo PT-BR padrão com foto e CPF e confirmar que a pontuação fica muito baixa (Vermelho, < 40) apontando vários erros críticos.
+2. Confirmar que um currículo em formato canadense perfeito recebe score verde alto.

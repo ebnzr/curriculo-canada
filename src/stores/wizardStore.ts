@@ -15,6 +15,11 @@ export function cleanResumeText(text: string): string {
     .trim()
 }
 
+export interface AtsIssue {
+  type: 'error' | 'warning';
+  message: string;
+}
+
 export interface WizardState {
   currentStep: number;
   noc: string;
@@ -22,11 +27,14 @@ export interface WizardState {
   city: string;
   resumeText: string;
   isLoading: boolean;
+  atsScore: number;
+  atsIssues: AtsIssue[];
 
   setStep: (step: number) => void;
   setContext: (noc: string, province: string, city?: string) => void;
   setResumeText: (text: string) => void;
   setIsLoading: (loading: boolean) => void;
+  setAtsPreview: (score: number, issues: AtsIssue[]) => void;
   reset: () => void;
 }
 
@@ -37,11 +45,14 @@ export const useWizardStore = create<WizardState>()((set) => ({
   city: '',
   resumeText: '',
   isLoading: false,
+  atsScore: 0,
+  atsIssues: [],
 
   setStep: (step) => set({ currentStep: step }),
   setContext: (noc, province, city = '') => set({ noc, province, city }),
   setResumeText: (text) => set({ resumeText: text }),
   setIsLoading: (isLoading) => set({ isLoading }),
+  setAtsPreview: (score, issues) => set({ atsScore: score, atsIssues: issues }),
   reset: () => set({
     currentStep: 1,
     noc: '',
@@ -49,5 +60,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
     city: '',
     resumeText: '',
     isLoading: false,
+    atsScore: 0,
+    atsIssues: [],
   }),
 }))

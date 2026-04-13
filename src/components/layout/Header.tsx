@@ -5,13 +5,21 @@ import { useAuth } from "@/hooks/useAuth"
 import { useWizardStore } from "@/stores/wizardStore"
 
 export function Header() {
-  const { user, profile, logout } = useAuth()
+  const { user, profile, loading, logout } = useAuth()
   const resetWizard = useWizardStore((state) => state.reset)
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await logout()
-    navigate("/")
+    try {
+      await logout()
+      // Aguardar um momento para garantir que o estado foi atualizado
+      setTimeout(() => {
+        navigate("/", { replace: true })
+      }, 100)
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error)
+      navigate("/", { replace: true })
+    }
   }
 
   const handleNewAnalysis = () => {
@@ -24,16 +32,16 @@ export function Header() {
       <div className="container px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex h-16 items-center justify-between">
         <Link to="/" className="flex items-baseline gap-1 group">
           <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-            CanadaPath
+            Currículo
           </span>
           <span className="font-heading font-light text-xl tracking-tight text-primary">
-            AI
+            Canadá
           </span>
           <span className="hidden sm:inline-block w-1.5 h-1.5 bg-primary rounded-full ml-0.5 mb-1" aria-hidden="true" />
         </Link>
 
         <div className="flex items-center justify-end gap-2 sm:gap-4">
-          {user ? (
+          {user && !loading ? (
             <div className="flex items-center gap-2 sm:gap-4">
               <span className="hidden sm:block text-sm font-medium text-muted-foreground max-w-[150px] truncate">
                 {profile?.name || user.user_metadata?.full_name || user.email}

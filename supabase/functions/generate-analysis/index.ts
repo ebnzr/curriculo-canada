@@ -236,7 +236,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 async function callCerebras(prompt: string, modelIndex = 0): Promise<string> {
-  const models = ["llama-3.3-70b", "llama-3.1-70b", "llama-3.1-8b"]
+  const models = ["llama3.1-70b", "llama3.1-8b"]
   const model = models[modelIndex]
 
   for (let attempt = 0; attempt <= 3; attempt++) {
@@ -262,8 +262,8 @@ async function callCerebras(prompt: string, modelIndex = 0): Promise<string> {
         await delay(Math.pow(2, attempt) * 1000)
         continue
       }
-      // Tentar próximo modelo se disponível
-      if (attempt >= 3 && modelIndex < models.length - 1) {
+      // Tentar próximo modelo se erro for modelo não encontrado ou falhou demais
+      if ((status === 404 || status === 400 || attempt >= 3) && modelIndex < models.length - 1) {
         return callCerebras(prompt, modelIndex + 1)
       }
       throw new Error(`Cerebras error ${status}: ${err?.error?.message}`)
@@ -278,7 +278,7 @@ async function callCerebras(prompt: string, modelIndex = 0): Promise<string> {
 }
 
 async function callGroq(prompt: string, modelIndex = 0): Promise<string> {
-  const models = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"]
+  const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
   const model = models[modelIndex]
 
   for (let attempt = 0; attempt <= 3; attempt++) {
@@ -299,11 +299,11 @@ async function callGroq(prompt: string, modelIndex = 0): Promise<string> {
     if (!response.ok) {
       const err = await response.json()
       const status = response.status
-      if ((status === 429 || status === 503) && attempt < 3) {
+      if ((status === 429 || status === 503 || status === 500) && attempt < 3) {
         await delay(Math.pow(2, attempt) * 1000)
         continue
       }
-      if (attempt >= 3 && modelIndex < models.length - 1) {
+      if ((status === 404 || status === 400 || attempt >= 3) && modelIndex < models.length - 1) {
         return callGroq(prompt, modelIndex + 1)
       }
       throw new Error(`Groq error ${status}: ${err?.error?.message}`)
@@ -318,7 +318,7 @@ async function callGroq(prompt: string, modelIndex = 0): Promise<string> {
 }
 
 async function callGemini(prompt: string, modelIndex = 0): Promise<string> {
-  const models = ["gemini-flash-lite-latest", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+  const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b"]
   const model = models[modelIndex]
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`
 
@@ -332,11 +332,11 @@ async function callGemini(prompt: string, modelIndex = 0): Promise<string> {
     if (!response.ok) {
       const err = await response.json()
       const status = response.status
-      if ((status === 503 || status === 429) && attempt < 3) {
+      if ((status === 503 || status === 429 || status === 500) && attempt < 3) {
         await delay(Math.pow(2, attempt) * 1000)
         continue
       }
-      if (attempt >= 3 && modelIndex < models.length - 1) {
+      if ((status === 404 || status === 400 || attempt >= 3) && modelIndex < models.length - 1) {
         return callGemini(prompt, modelIndex + 1)
       }
       throw new Error(`Gemini error ${status}: ${err?.error?.message}`)

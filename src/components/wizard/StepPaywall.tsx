@@ -107,7 +107,7 @@ export function StepPaywall() {
       if (url.includes('mock=true') || url.includes('localhost') || url.includes('payment=success') || url.includes('payment-sandbox')) {
         await new Promise(resolve => setTimeout(resolve, 2000))
         await supabase.from('profiles').update({ is_premium: true }).eq('id', user.id)
-        setStep(4)
+        setStep(5)
         setLoading(false)
         setShowOverlay(false)
         return
@@ -139,7 +139,7 @@ export function StepPaywall() {
             if (popup.location.href.includes('success=true')) {
               clearInterval(timer)
               popup.close()
-              setStep(4)
+              setStep(5)
             }
           } catch {
             // Erro de cross-origin esperado
@@ -302,7 +302,7 @@ export function StepPaywall() {
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground hover:text-primary"
-            onClick={() => { setStep(4) }}
+            onClick={() => { setStep(5) }}
           >
             Modo Dev - Pular Pagamento
           </Button>

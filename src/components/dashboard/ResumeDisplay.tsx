@@ -78,10 +78,8 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
         setValidationResult(result.validationResult)
         setShowPreview(true)
         
-        // Se houver problemas, mostrar alerta também
-        if (result.hasIssues || result.validationResult.issues.length > 0) {
-          setShowQualityAlert(true)
-        }
+        // Armazenamos o blob, mas dependemos do usuário clicar em "Ver detalhes" para ver o quality alert
+        // removemos o "setShowQualityAlert(true)" automático
       }
     } catch (err) {
       console.error("Erro ao gerar preview:", err)
@@ -329,10 +327,10 @@ export function ResumeDisplay({ content }: ResumeDisplayProps) {
             </div>
             {validationResult && validationResult.issues.length > 0 && (
               <p className="text-sm text-amber-600 mt-2">
-                ⚠️ Detectados {validationResult.issues.filter(i => i.severity === 'CRITICAL').length} problemas de layout. 
+                ⚠️ O layout em PDF precisa de ajustes. Recomendamos utilizar a versão em DOC para fazer as alterações desejadas.
                 <button 
                   onClick={() => setShowQualityAlert(true)}
-                  className="underline hover:text-amber-700"
+                  className="underline hover:text-amber-700 ml-1"
                 >
                   Ver detalhes
                 </button>

@@ -20,7 +20,7 @@ export function Hero() {
             <div className="flex items-center gap-4 mb-6">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs font-medium tracking-[0.3em] uppercase text-muted-foreground">
-                CanadaPath • Edição 2025
+                CurrículoCanadá • Edição 2025
               </span>
               <div className="h-px flex-1 bg-border" />
             </div>
