@@ -13,7 +13,7 @@ export function Login() {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row">
       {/* Left Side - Value Proposition */}
-      <div className="flex-1 bg-gradient-to-br from-primary/5 via-primary/10 to-muted/50 flex items-center justify-center p-8 lg:p-16">
+      <div className="order-2 lg:order-1 flex-1 bg-gradient-to-br from-primary/5 via-primary/10 to-muted/50 flex items-center justify-center p-8 lg:p-16">
         <div className="max-w-md space-y-8">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5">
@@ -103,7 +103,7 @@ export function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-start justify-center p-8 lg:p-16 bg-background lg:pt-24">
+      <div className="order-1 lg:order-2 flex-1 flex items-start justify-center p-8 lg:p-16 bg-background lg:pt-24">
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary/10 mb-2">
