@@ -89,7 +89,7 @@ export function useAuth() {
 
   const loginWithGoogle = () => supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: import.meta.env.VITE_APP_URL },
+    options: { redirectTo: window.location.origin },
   });
 
   const logout = async () => {
