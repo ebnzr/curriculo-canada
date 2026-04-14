@@ -8,7 +8,7 @@ interface ScoreGaugeProps {
 export function ScoreGauge({ score, size = 120 }: ScoreGaugeProps) {
   const [displayScore, setDisplayScore] = useState(0)
   const [isAnimating, setIsAnimating] = useState(true)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     setIsAnimating(true)
