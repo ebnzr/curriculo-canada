@@ -94,17 +94,15 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
         console.error("Logout error:", error);
         throw error;
       }
-      // Limpar estado imediatamente
       setUser(null);
       setProfile(null);
     } catch (err) {
       console.error("Logout failed:", err);
-      // Mesmo com erro, limpar o estado local
       setUser(null);
       setProfile(null);
     }

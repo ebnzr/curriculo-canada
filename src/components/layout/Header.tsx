@@ -10,16 +10,8 @@ export function Header() {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    try {
-      await logout()
-      // Aguardar um momento para garantir que o estado foi atualizado
-      setTimeout(() => {
-        navigate("/", { replace: true })
-      }, 100)
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error)
-      navigate("/", { replace: true })
-    }
+    await logout()
+    navigate("/", { replace: true })
   }
 
   const handleNewAnalysis = () => {

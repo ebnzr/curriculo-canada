@@ -8,7 +8,7 @@ import {
 const faqs = [
   {
     question: "Como funciona a análise gratuita?",
-    answer: "Você preenche seu NOC, Província alvo e cola seu currículo atual. Nossa inteligência artificial faz uma leitura simulando os robôs de RH do Canadá (ATS) e te entrega uma nota de 0 a 100, apontando o erro mais crítico gratuitamente."
+    answer: "Você preenche seu NOC, Província alvo e cola seu currículo atual. Nossa inteligência artificial faz uma leitura simulando os robôs de RH do Canadá (ATS) e te entrega uma nota de 0 a 100, apontando alguns erros críticos gratuitamente."
   },
   {
     question: "O que ganho ao comprar o pacote premium?",
